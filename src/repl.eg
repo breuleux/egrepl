@@ -255,7 +255,7 @@ class Repl:
 
    submit{} =
       @set_multiline{false}
-      text = @input.innerText
+      text = @input.textContent
       @process{text}
       @input.innerHTML := ""
       @sink{}
@@ -270,12 +270,12 @@ class Repl:
       do:
          previous{} =
             if [@cursor > 0]:
-               @input.innerText := @history[-- @cursor]
+               @input.textContent := @history[-- @cursor]
                goto_end{@input}
                @sink{}
          next{} =
             if [@cursor < @history.length - 1]:
-               @input.innerText := @history[++ @cursor]
+               @input.textContent := @history[++ @cursor]
                goto_end{@input}
                @sink{}
          common = {
@@ -295,7 +295,7 @@ class Repl:
                @begin_multiline{}
                .break
             Enter{} =
-               match @input.innerText:
+               match @input.textContent:
                   R"(=|->|%|:)$"? ->
                      @begin_multiline{}
                   other ->
@@ -313,7 +313,7 @@ class Repl:
             "C-Enter"{} =
                @submit{}
             Tab{} =
-               txt = @input.innerText
+               txt = @input.textContent
                if [R"\n$"? txt]:
                   txt := txt.substring{0, txt.length - 1}
                insert_before_caret{"   "}
@@ -343,7 +343,7 @@ class Repl:
                else:
                   ""
             match @eval{real_text}:
-               when text.trim{} === "" ->
+               when text and text.trim{} === "" ->
                   ""
                #success{undefined?} ->
                   ""
