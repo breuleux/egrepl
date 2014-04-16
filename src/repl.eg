@@ -202,7 +202,9 @@ goto_end{elem} =
    selection.addRange{range}
 
 insert_before_caret{text} =
-   node = document.createTextNode{text}
+   node = match text:
+      String? -> document.createTextNode{text}
+      other -> other
    sel = window.getSelection{}
    if sel.rangeCount:
       range = sel.getRangeAt{0}
@@ -262,8 +264,9 @@ class Repl:
 
    begin_multiline{} =
       @set_multiline{true}
-      @input.innerHTML := @input.innerHTML + "\n   "
+      ;; @input.innerHTML := @input.innerHTML + "\n   "
       goto_end{@input}
+      insert_before_caret{"\n   "}
       @sink{}
 
    set_multiline{x} = match x:
@@ -296,7 +299,7 @@ class Repl:
                .break
             Enter{} =
                match @input.textContent:
-                  R"(=|->|%|:)$"? ->
+                  R"(=|->|%|:|with|where|each)$"? ->
                      @begin_multiline{}
                   other ->
                      @submit{}
@@ -312,10 +315,10 @@ class Repl:
                .break
             "C-Enter"{} =
                @submit{}
+            Enter{} =
+               insert_before_caret{"\n"}
+               @sink{}
             Tab{} =
-               txt = @input.textContent
-               if [R"\n$"? txt]:
-                  txt := txt.substring{0, txt.length - 1}
                insert_before_caret{"   "}
          }
 
