@@ -1,0 +1,42 @@
+<!doctype html>
+
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="style/repl.css" />
+    <script type="text/javascript" src="scripts/jquery.js"></script>
+    <script type="text/javascript" src="scripts/eg.js"></script>
+  </head>
+  <body>
+
+    <div id="box">
+      <div id="interactive">
+      </div>
+
+      <div class="in">
+        <div class="inbanner"></div>
+        <div contentEditable="true" id="input"></div>
+      </div>
+    </div>
+
+    <script>
+        Repl = require("repl").Repl
+        repl = Repl(document.getElementById("box"),
+                    document.getElementById("interactive"),
+                    document.getElementById("input"),
+                    eval);
+        cards = require("repl").make_cards(repl)
+        _current = 0;
+        function _next() {
+           return cards[++_current]
+        }
+        repl.eval("macro next{_, _, form, _}: '[^form.env.convert{'_next}]{}")
+        repl.eval("globals: [cards, alert, _next]");
+        repl.process("cards[0]", false)
+        <!-- repl.process('{1, 2, true, false, "hello", "", {}}') -->
+        <!-- repl.process('{apple = 1, banana = 2}') -->
+        <!-- repl.process('require: repl as r') -->
+        <!-- repl.process('r.tokenize{r.Source{"a =\n  2"}}') -->
+    </script>
+
+  </body>
+</html>
