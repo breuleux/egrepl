@@ -21,6 +21,7 @@ html {
     outline: 0px;
     padding-left: 0.5em;
     border-left: 3px solid white;
+    height: auto;
 }
 
 #input.multiline {
@@ -31,12 +32,15 @@ html {
     content: "...";
 }
 
-
 .in, .out, .err {
     /* border: 1px solid #888; */
     display: flex;
     font-family: monospace;
     white-space: pre;
+}
+
+.hasinput {
+    align-items: flex-start;
 }
 
 .display {

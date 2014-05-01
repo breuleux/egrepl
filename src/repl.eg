@@ -335,7 +335,7 @@ class Repl:
 
    process{text, display_in = true} =
       @add_to_history{text}
-      real_text = "\n" + text + "\n"
+      real_text = text ;; "\n" + text + "\n"
       node = make_dom with
          .io %
             if display_in:
@@ -346,7 +346,7 @@ class Repl:
                else:
                   ""
             match @eval{real_text}:
-               when text and text.trim{} === "" ->
+               when text.trim{} === "" ->
                   ""
                #success{undefined?} ->
                   ""
@@ -447,21 +447,29 @@ make_cards{repl} =
 
       .card %
          h3 % "Variables"
-         % | "There are separate operators for declaration and assignment. "
-           | "A variable cannot be assigned to before it is declared."
          table %
             tr %
-               td % [b % "Declare", " a variable"]
+               td[colspan = 2] %
+                  [b % "Declare", " a variable"]
+            tr %
+               td % "Read-only"
+               td % clickable{"let x = 1234"}
+            tr %
+               td % "Mutable"
+               td % clickable{"var x = 1234"}
+            tr %
+               td % [b % "Set", " a variable"]
                td % clickable{"x = 1234"}
-            tr %
-               td % [b % "Set", " an existing variable"]
-               td % clickable{"x := 999"}
-            tr %
-               td % [b % "Use", " your variable!"]
-               td % clickable{"x + x"}
+
+         % | "Attempting to set a variable that has not been declared"
+           | " will create a ", b%"read-only", " variable in the local scope."
+
+         % | b%"Note:", " as a convenience, all variables declared interactively"
+           | " in the top scope are in fact mutable."
+
          % | "You can create blocks with their own local variables using ",
            | code%"[]", ", ", code%"let", " or ", code%"where"
-         % clickable{"[a = 10, b = 90, a + b]"}
+         % clickable{"[let a = 10, let b = 90, a + b]"}
          % clickable{"let [a = 10, b = 90]: a + b"}
          % clickable{"a + b where
    a = 10
@@ -500,12 +508,12 @@ make_cards{repl} =
          h3 % "Control structures"
          % | code % "if", " and ", code % "while"
            | " are available."
-         % clickable{"if [13 > 0]:
+         % clickable{"if 13 > 0:
    then: \"This number is positive!\"
    else: \"This number is negative!\"
 "}
          % clickable{"i = 3
-while [i > 0]:
+while i > 0:
    alert{i}
    i--
 "}
@@ -614,9 +622,9 @@ acc
            | " refer to fields and members of the instance."
          % clickable{"class Person:
    constructor{name, age, job} =
-      @name := name
-      @age := age
-      @job := job
+      @name = name
+      @age = age
+      @job = job
    hello{} =
       \"Hello, I am \" + @name + \", \" + @age + \", and I am a \" + @job
 "}
