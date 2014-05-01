@@ -194,7 +194,7 @@ repr{match x, Function? recur = repr} =
 
 
 goto_end{elem} =
-   range = document.createRange{}
+   let range = document.createRange{}
    range.selectNodeContents{elem}
    range.collapse{false}
    selection = window.getSelection{}
@@ -207,7 +207,7 @@ insert_before_caret{text} =
       other -> other
    sel = window.getSelection{}
    if sel.rangeCount:
-      range = sel.getRangeAt{0}
+      let range = sel.getRangeAt{0}
       using range:
          @collapse{false}
          @insertNode{node}
@@ -228,7 +228,7 @@ class Repl:
    constructor{box, target, input, evaluator} =
 
       @url := "<repl>"
-      @gen := eg.Generator{}
+      @gen := eg.Generator{true}
       @evaluator := evaluator
 
       @box := box
@@ -342,7 +342,7 @@ class Repl:
                then:
                   .[in] %
                      .inbanner %
-                     .entry % text
+                     .entry % text or " "
                else:
                   ""
             match @eval{real_text}:

@@ -3,6 +3,8 @@
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="style/repl.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="style/codemirror.css" /> -->
+    <!-- <script type="text/javascript" src="scripts/codemirror.js"></script> -->
     <script type="text/javascript" src="scripts/jquery.js"></script>
     <script type="text/javascript" src="scripts/eg.js"></script>
   </head>
@@ -16,9 +18,16 @@
         <div class="inbanner"></div>
         <div contentEditable="true" id="input"></div>
       </div>
+
+      <!-- <textarea id="testta"></textarea> -->
     </div>
 
+
+
     <script>
+
+        //CodeMirror.fromTextArea{document.getElementById{"testta"}} with {indentUnit = 3}
+
         Repl = require("repl").Repl
         repl = Repl(document.getElementById("box"),
                     document.getElementById("interactive"),
@@ -30,15 +39,17 @@
            return cards[++_current]
         }
         repl.eval("macro next{_, _, form, _}: '[^form.env.convert{'_next}]{}")
-        repl.eval("globals: [cards, alert, _next]");
-        repl.process("cards[0]", false)
+        repl.eval("globals: [cards, alert, document, window, _next]");
+        // repl.eval("globals: [CodeMirror]");
+        repl.process("cards[0]", false);
+        $("#input").focus();
         <!-- repl.process('{1, 2, true, false, "hello", "", {}}') -->
         <!-- repl.process('{apple = 1, banana = 2}') -->
+        <!-- repl.process('{a = 1\n b = 2\n c = 3\n d = 4}') -->
+
         <!-- repl.process('require: repl as r') -->
         <!-- repl.process('r.tokenize{r.Source{"a =\n  2"}}') -->
     </script>
-
-    <a href="https://github.com/breuleux/earl-grey"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
 
   </body>
 </html>
