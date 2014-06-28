@@ -79,20 +79,20 @@ prevent{event} =
 class Interactor:
 
    constructor{target} =
-      @functions := target.interactor_functions or target
+      @functions = target.interactor_functions or target
 
-      @more_functions := {...} with
+      @more_functions = {...} with
          default{} = "default"
          stick{} = "stick"
          break{} = "break"
          none{} = undefined
 
-      @current_bindings := null
-      @global_bindings := null
+      @current_bindings = null
+      @global_bindings = null
 
    set_bindings{new_bindings} =
-      @current_bindings := null
-      @global_bindings := new_bindings
+      @current_bindings = null
+      @global_bindings = new_bindings
 
    execute{c, e} =
       match c:
@@ -102,9 +102,9 @@ class Interactor:
          Function? f ->
             f{@target, e}
          Array? cmds ->
-            result = null
+            var result = null
             cmds each cmd ->
-               result := @execute{cmd, e}
+               result = @execute{cmd, e}
                match result:
                   .break ->
                      prevent{e}
@@ -117,16 +117,16 @@ class Interactor:
                      prevent{e}
             result
          cmd ->
-            @current_bindings := cmd
+            @current_bindings = cmd
             "break stick"
 
    process_codes{codes, e} =
       bindings = @current_bindings or @global_bindings
-      just_modifiers = null
+      var just_modifiers = null
       commands = {}
       codes each code ->
          if [R"^([ACS]-)+$"? code]:
-            just_modifiers := true
+            just_modifiers = true
          command = bindings[code]
          if [command != undefined]:
             commands.push with command
@@ -138,13 +138,13 @@ class Interactor:
                   ;; We delete the sub-bindings, except for when we
                   ;; hit modifiers without any other key.
                   if [not just_modifiers]:
-                     @current_bindings := null
+                     @current_bindings = null
                   prevent{e}
                when @current_bindings and @current_bindings._browser ->
                   if [not just_modifiers]:
-                     @current_bindings := null
+                     @current_bindings = null
                when @current_bindings and not just_modifiers ->
-                  @current_bindings := null
+                  @current_bindings = null
                   @process_codes{codes, e}
                otherwise ->
                   null
@@ -155,7 +155,7 @@ class Interactor:
             if [[not [result and result.match and result.match{"stick"}]]
                 \ and @current_bindings
                 \ and not @current_bindings._stick]:
-               @current_bindings := null
+               @current_bindings = null
 
    getcode{e} =
       code = keynames[e.which] or "<"+e.which+">"
@@ -182,8 +182,8 @@ class Interactor:
       @process_codes{{"!=All", code, "=All"}, e}
 
    install{element} =
-      element.onkeydown := @keydown.bind{@}
-      element.onkeyup := @keyup.bind{@}
-      element.onkeypress := @keypress.bind{@}
+      element.onkeydown = @keydown.bind{@}
+      element.onkeyup = @keyup.bind{@}
+      element.onkeypress = @keypress.bind{@}
 
 

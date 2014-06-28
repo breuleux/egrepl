@@ -34,13 +34,13 @@ gensym = GenSym{"io_"}
 ;;    parse{match whole} =
 ;;       #void{} -> null
 ;;       #symbol{s} ->
-;;          tag := s
+;;          tag = s
 ;;       #value{x} ->
 ;;          cls.push with x
 ;;       '[. ^[#symbol{x} or #value{x}]] ->
 ;;          cls.push with x
 ;;       '[# ^[#symbol{x} or #value{x}]] ->
-;;          id := #value{x}
+;;          id = #value{x}
 ;;       '[^_ = ^_] ->
 ;;          kv.push with whole
 ;;       #send{expr, rest} ->
@@ -78,7 +78,7 @@ gensym = GenSym{"io_"}
 create_node{tag, kv, contents} =
    node = document.createElement{tag}
    items{kv} each {k, v} ->
-      node[k] := v
+      node[k] = v
    [Array! contents] each
       String? s ->
          node.appendChild{document.createTextNode{s}}
@@ -99,9 +99,9 @@ make_dom{match, default_tag = "div"} =
       node
 
    Node? {=> classes, => children} ->
-      tag = default_tag
+      var tag = default_tag
       _classes = {}
-      id = null
+      var id = null
       kv = {}
       sub = {}
       classes each
@@ -110,25 +110,25 @@ make_dom{match, default_tag = "div"} =
          #assoc{k} ->
             kv.push with {k, undefined}
          R'[start, "+", {*any}]! {_, m} ->
-            tag := m
+            tag = m
          R'[start, "#", {*any}]! {_, m} ->
-            id := m
+            id = m
          String? s ->
             _classes.push with s
 
       node = document.createElement{tag}
       if id:
-         node.id := id
+         node.id = id
       if _classes.length:
-         node.className := _classes.join{" "}
+         node.className = _classes.join{" "}
       kv each {k, v} ->
-         node[k] := v
+         node[k] = v
 
       match tag:
          .raw ->
             children each
                String? s ->
-                  node.innerHTML := s
+                  node.innerHTML = s
          other ->
             children each c ->
                node.appendChild{make_dom{c, default_tag}}
@@ -207,11 +207,11 @@ insert_before_caret{text} =
       other -> other
    sel = window.getSelection{}
    if sel.rangeCount:
-      let range = sel.getRangeAt{0}
+      var range = sel.getRangeAt{0}
       using range:
          @collapse{false}
          @insertNode{node}
-      range := range.cloneRange{}
+      range = range.cloneRange{}
       using range:
          @selectNodeContents{node}
          @collapse{false}
@@ -219,7 +219,7 @@ insert_before_caret{text} =
       sel.addRange{range}
 
 
-Error.prototype["::repr"] := {} ->
+Error.prototype["::repr"] = {} ->
    format_error{this}
 
 
@@ -227,21 +227,21 @@ class Repl:
 
    constructor{box, target, input, evaluator} =
 
-      @url := "<repl>"
-      @gen := eg.Generator{true}
-      @evaluator := evaluator
+      @url = "<repl>"
+      @gen = eg.Generator{true}
+      @evaluator = evaluator
 
-      @box := box
-      @target := target
-      @input := input
-      @multiline := false
+      @box = box
+      @target = target
+      @input = input
+      @multiline = false
 
-      @interactor := kb.Interactor{{=}}
+      @interactor = kb.Interactor{{=}}
       @set_multiline{false}
       @interactor.install{@input}
 
-      @cursor := 0
-      @history := {""}
+      @cursor = 0
+      @history = {""}
 
    sink{} =
       jQuery{@box}.scrollTop{@box.scrollHeight}
@@ -251,20 +251,20 @@ class Repl:
       if [text !== "" and not [hl > 1 and @history[hl - 2] == text]]:
          ;; Only add to history if the command was nonempty
          ;; and we're not repeating the same command
-         @history[hl - 1] := text
+         @history[hl - 1] = text
          @history.push{""}
-      @cursor := @history.length - 1
+      @cursor = @history.length - 1
 
    submit{} =
       @set_multiline{false}
       text = @input.textContent
       @process{text}
-      @input.innerHTML := ""
+      @input.innerHTML = ""
       @sink{}
 
    begin_multiline{} =
       @set_multiline{true}
-      ;; @input.innerHTML := @input.innerHTML + "\n   "
+      ;; @input.innerHTML = @input.innerHTML + "\n   "
       goto_end{@input}
       insert_before_caret{"\n   "}
       @sink{}
@@ -273,12 +273,12 @@ class Repl:
       do:
          previous{} =
             if [@cursor > 0]:
-               @input.textContent := @history[-- @cursor]
+               @input.textContent = @history[-- @cursor]
                goto_end{@input}
                @sink{}
          next{} =
             if [@cursor < @history.length - 1]:
-               @input.textContent := @history[++ @cursor]
+               @input.textContent = @history[++ @cursor]
                goto_end{@input}
                @sink{}
          common = {
@@ -364,7 +364,7 @@ class Repl:
                      .result % .eg % repr{error}
 
       name = gensym{}
-      node.id := name
+      node.id = name
 
       @target.appendChild{node}
 
