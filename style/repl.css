@@ -316,3 +316,8 @@ html {
 .card .clickable:hover {
     background-color: #e8e8ff;
 }
+
+.card .blocks > * {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
