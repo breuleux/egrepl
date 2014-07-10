@@ -114,34 +114,6 @@ make_cards{repr}{repl} =
       ;;       with | % "Methods"
       ;;            | clickable_row{"\"hello\".substring{1}"}
 
-
-      
-      .card %
-         h3 % "Basics"
-         % | "Click on boxes like ", clickable{"this"}
-           | " to evaluate their contents."
-         h4 % "Strings"
-         span % clickable_row with
-            "\"hello world\""
-            ".word"
-            "\"My name is \\\"Olivier\\\"\""
-         h4 % "Numbers"
-         mktable2{{...}} with
-            with | % "Decimal"
-                 | clickable_row{"1", "1.4", "4.93e51"}
-            with | % "Hex"
-                 | clickable_row{"16rFF", "16r100", "16rDEADBEEF", "16r0.8"}
-            with | % "Binary etc."
-                 | clickable_row{"2r1110", "3r20", "36rZAZZ"}
-         h4 % "Function calls"
-         mktable2{{...}} with
-            with | % "Call"
-                 | clickable_row{"alert{\"Hello!\"}", "alert with \"Hello!\""}
-            with | % "Methods"
-                 | clickable_row{"\"hello\".substring{1}"}
-         
-         clickable{"next"}, " => variables"
-
       .card %
          h3 % "Variables"
          table %

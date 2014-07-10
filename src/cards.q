@@ -32,6 +32,41 @@ tut1 ->
   | __Call    | / alert{"Hello!"} / alert with "Hello!"
   | __Methods | [/ "hello".substring{1}]
 
+  /next => variables
+
+
+tut2 ->
+
+  === Variables (boom)
+
+  | Declare __read-only | / let x = 1234
+  | Declare __mutable   | / var x = 1234
+  | __Set a variable    | / x = 1234
+
+  Attempting to set a variable that has not yet been declared will
+  create a __read-only variable in the local scope.
+
+  .note ..
+    __Note: as a convenience, all variables declared interactively in
+    the top scope are in fact mutable.
+
+  You can create blocks with their own local variables using `[[]],
+  `let or `where.
+
+  / [[let a = 10, let b = 90, a + b]]
+
+  / let [a = 10, b = 90]: a + b
+
+  / a + b where
+       a = 10
+       b = 90
+
+  Be are that `[[]] only creates a block when it encloses more than
+  one expression. An indented block is completely equivalent to
+  wrapping it in `[[]]~s.
+
+  /next => data structures
+
 
 catatouille ->
 
