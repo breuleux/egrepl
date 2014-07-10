@@ -36,12 +36,19 @@
         cards = require("repl").make_cards(repl)
         _current = 0;
         function _next() {
-           return cards[++_current]
+           return cards.tutorial[++_current]
         }
-        repl.eval("macro next{_, _, form, _}: '[^form.env.convert{'_next}]{}")
-        repl.eval("globals: [cards, alert, document, window, _next]");
+        function _help(topic) {
+           if (topic)
+              return cards[topic] || ("Invalid help topic: \"" + topic + "\"")
+           else
+              return cards["topics"]
+        }
+        repl.eval("macro next{_, _, form, _}: '[^form.env.mark{'_next}]{}")
+        repl.eval("macro help{_, _, form, match}: [do: h = form.env.mark{'_help}, #symbol{topic} or #value{topic} -> '[^h]{^=topic}, #void{} -> '[^h]{}]")
+        repl.eval("globals: [cards, alert, document, window, _next, _help]");
         // repl.eval("globals: [CodeMirror]");
-        repl.process("cards[0]", false);
+        repl.process("cards.tutorial[0]", false);
         $("#input").focus();
         <!-- repl.process('{1, 2, true, false, "hello", "", {}}') -->
         <!-- repl.process('{apple = 1, banana = 2}') -->

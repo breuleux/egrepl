@@ -1,20 +1,21 @@
 
 require:
+   "./cards" -> make_cards
    "./kb" as kb
-   "../lib/earl-grey" as eg
-   "../lib/util" ->
+   "earl-grey/earl-grey" as eg
+   "earl-grey/util" ->
       GenSym
-   "../lib/location" ->
+   "earl-grey/location" ->
       Location, highlight_locations
       format_error
-   "../lib/lex" ->
+   "earl-grey/lex" ->
       tokenize
-   "../lib/parse" ->
+   "earl-grey/parse" ->
       parse
 
 provide:
    Repl, kb.Interactor as Interactor, parse, tokenize, eg.Source as Source
-   make_cards
+   make_cards{repr} as make_cards
 
 globals:
    document, window, alert, jQuery, setTimeout, Showdown
@@ -98,30 +99,19 @@ make_dom{match, default_tag = "div"} =
          node.appendChild{make_dom{arg, default_tag}}
       node
 
-   Node? {=> classes, => children} ->
+   Node? {=> tags, => props, => children} ->
       var tag = default_tag
-      _classes = {}
-      var id = null
-      kv = {}
-      sub = {}
-      classes each
-         #assoc{k, v} ->
-            kv.push with {k, v}
-         #assoc{k} ->
-            kv.push with {k, undefined}
-         R'[start, "+", {*any}]! {_, m} ->
-            tag = m
-         R'[start, "#", {*any}]! {_, m} ->
-            id = m
-         String? s ->
-            _classes.push with s
+      classes = {}
+      tags each
+         R"^\\.(.*)"! {_, name} ->
+            classes.push{name}
+         other ->
+            tag = other
 
       node = document.createElement{tag}
-      if id:
-         node.id = id
-      if _classes.length:
-         node.className = _classes.join{" "}
-      kv each {k, v} ->
+      if classes.length:
+         node.className = classes.join{" "}
+      items{props} each {k, v} ->
          node[k] = v
 
       match tag:
@@ -134,6 +124,43 @@ make_dom{match, default_tag = "div"} =
                node.appendChild{make_dom{c, default_tag}}
 
       node
+
+   ;; Node? {=> classes, => children} ->
+   ;;    var tag = default_tag
+   ;;    _classes = {}
+   ;;    var id = null
+   ;;    kv = {}
+   ;;    sub = {}
+   ;;    classes each
+   ;;       #assoc{k, v} ->
+   ;;          kv.push with {k, v}
+   ;;       #assoc{k} ->
+   ;;          kv.push with {k, undefined}
+   ;;       R'[start, "+", {*any}]! {_, m} ->
+   ;;          tag = m
+   ;;       R'[start, "#", {*any}]! {_, m} ->
+   ;;          id = m
+   ;;       String? s ->
+   ;;          _classes.push with s
+
+   ;;    node = document.createElement{tag}
+   ;;    if id:
+   ;;       node.id = id
+   ;;    if _classes.length:
+   ;;       node.className = _classes.join{" "}
+   ;;    kv each {k, v} ->
+   ;;       node[k] = v
+
+   ;;    match tag:
+   ;;       .raw ->
+   ;;          children each
+   ;;             String? s ->
+   ;;                node.innerHTML = s
+   ;;       other ->
+   ;;          children each c ->
+   ;;             node.appendChild{make_dom{c, default_tag}}
+
+   ;;    node
 
    other ->
       make_dom{String! other}
@@ -151,16 +178,6 @@ mktable{x, recur = repr} =
                   td % recur{v, repr}
       else:
          .object.empty %
-
-mktable2{x, recur = repr} =
-   its = match x:
-      Array? -> x
-      other -> items{x}
-   table %
-      its each {k, v} ->
-         tr %
-            th % recur{k, repr}
-            td % recur{v, repr}
 
 repr{match x, Function? recur = repr} =
    === true -> .special.true % "true"
@@ -388,267 +405,3 @@ class Repl:
       on{".traceback"}.addClass{.collapsed}.click{collapse}
 
 
-
-make_cards{repl} =
-
-   clickable{text} =
-      click{e} =
-         e.preventDefault{}
-         repl.process{text}
-         repl.sink{}
-         jQuery{repl.input}.focus{}
-      .clickable [onclick = click] %
-         text
-
-   clickable_row{*items} =
-      span %
-         items each
-            first item ->
-               clickable{item}
-            item ->
-               span % [span.separator % "", clickable{item}]
-
-   {
-
-      .card %
-         h3 % "Keyboard controls"
-         mktable2{{...}} with
-            {code % "Up/Down", "Navigate history"}
-            {code % "Enter/Shift-Enter", "Evaluate an expression"}
-            {code % "Control-l", "Clear the screen"}
-            {code % "Control-m", "Toggle mulitline mode"}
-         "Type ", clickable{"next"}, " to continue with the tutorial"
-      
-      .card %
-         h3 % "Basics"
-         % | "Click on boxes like ", clickable{"this"}
-           | " to evaluate their contents."
-         h4 % "Strings"
-         span % clickable_row with
-            "\"hello world\""
-            ".word"
-            "\"My name is \\\"Olivier\\\"\""
-         h4 % "Numbers"
-         mktable2{{...}} with
-            with | % "Decimal"
-                 | clickable_row{"1", "1.4", "4.93e51"}
-            with | % "Hex"
-                 | clickable_row{"16rFF", "16r100", "16rDEADBEEF", "16r0.8"}
-            with | % "Binary etc."
-                 | clickable_row{"2r1110", "3r20", "36rZAZZ"}
-         h4 % "Function calls"
-         mktable2{{...}} with
-            with | % "Call"
-                 | clickable_row{"alert{\"Hello!\"}", "alert with \"Hello!\""}
-            with | % "Methods"
-                 | clickable_row{"\"hello\".substring{1}"}
-         
-         clickable{"next"}, " => variables"
-
-      .card %
-         h3 % "Variables"
-         table %
-            tr %
-               td[colspan = 2] %
-                  [b % "Declare", " a variable"]
-            tr %
-               td % "Read-only"
-               td % clickable{"let x = 1234"}
-            tr %
-               td % "Mutable"
-               td % clickable{"var x = 1234"}
-            tr %
-               td % [b % "Set", " a variable"]
-               td % clickable{"x = 1234"}
-
-         % | "Attempting to set a variable that has not been declared"
-           | " will create a ", b%"read-only", " variable in the local scope."
-
-         % | b%"Note:", " as a convenience, all variables declared interactively"
-           | " in the top scope are in fact mutable."
-
-         % | "You can create blocks with their own local variables using ",
-           | code%"[]", ", ", code%"let", " or ", code%"where"
-         % clickable{"[let a = 10, let b = 90, a + b]"}
-         % clickable{"let [a = 10, b = 90]: a + b"}
-         % clickable{"a + b where
-   a = 10
-   b = 90"}
-         % | "Be aware that ", code%"[]", " only creates a block"
-           | " when it encloses more than one expression."
-         % | "An indented block is completely equivalent to "
-           | "wrapping it in ", code%"[]", "s"
-         clickable{"next"}, " => data structures"
-
-      .card %
-         h3 % "Data structures"
-         % | "Earl Grey uses curly braces "
-           | [code % "{}"], " to define all data structures."
-         mktable2{{...}} with
-            with | % "Arrays"
-                 | clickable_row{"{1, 2, 3}", "{1, {2, 3}}", "{\"hello\"}"}
-            with | % "Objects"
-                 | clickable_row{"{name = .Peter, age = 20}", "{\"a\" => 123}"}
-         % | "The empty array is ", clickable{"{}"}
-           | " and the empty object is ", clickable{"{=}"}
-         h4 % "Deconstruction"
-         % "You can extract array elements and object fields into variables directly."
-         % clickable{"{x, y} = {11, 22}"}
-         % clickable{"{x, *rest, y} = {111, 222, 333, 444}"}
-         % clickable{"{=> name} = {name = .Peter, age = 20}"}
-         h4 % "Operations"
-         mktable2{{...}} with
-            with | % "Concatenation"
-                 | clickable{"{1, 2} ++ {3, 4, 5}"}
-            with | % "Object fusion"
-                 | clickable{"{name = .Kim} & {age = 39}"}
-         clickable{"next"}, " => control structures"
-
-      .card %
-         h3 % "Control structures"
-         % | code % "if", " and ", code % "while"
-           | " are available."
-         % clickable{"if 13 > 0:
-   then: \"This number is positive!\"
-   else: \"This number is negative!\"
-"}
-         % clickable{"i = 3
-while i > 0:
-   alert{i}
-   i--
-"}
-         % | "Notice that both branches of ", code % "if", " must be nested."
-           | " The expression form of ", code % "if", " is simply "
-           | clickable{"if{1, .yes, .no}"}
-         clickable{"next"}, " => control structures [2]"
-
-      .card %
-         h3 % "Control structures [2]"
-         % | "Earl Grey's ", code%"if", " nests poorly, so if you want to "
-           | "write many clauses use ", code%"match"
-         % clickable{"x = 13
-match:
-   when x > 0 -> .positive
-   when x < 0 -> .negative
-   when x == 0 -> .zero
-"}
-         % "You can also match on the variable directly!"
-         % clickable{"x = 13
-match x:
-   > 0 -> .positive
-   < 0 -> .negative
-   0 -> .zero
-"}
-         % | "The left hand side of the arrow is a special pattern matching"
-           | " language, whereas ", code%"when", " takes a standard expression."
-
-         clickable{"next"}, " => each"
-
-
-      .card %
-         h3 % "each"
-         % | "A single operator serves both looping over data structures"
-           | " and list comprehensions."
-         % clickable{"{1, 2, 3} each i -> -i"}
-         % clickable{"1..10 each i -> i * i"}
-         % clickable{"1..10 each i when i mod 2 == 0 -> i"}
-         % | "You can have more than one clause"
-         % clickable{"{1, 2, .hello, 4, 72, 99, {}} each
-   String? s -> {s, .string}
-   Number? i when i mod 2 == 0 -> {i, .even}
-   Number? i when i mod 2 == 1 -> {i, .odd}
-   x -> {x, .dunno}
-"}
-         % | code%"first", " and ", code%"last", " are special patterns"
-         % clickable{"acc = \"\"
-{.a, .b, .c, .d} each
-   first x -> acc += \"[\" + x
-   last x -> acc += \", \" + x + \"]\"
-   x -> acc += \", \" + x
-acc
-"}
-         % "Be careful to put the catchall clause last."
-         clickable{"next"}, " => functions"
-
-      .card %
-         h3 % "Functions"
-         % | "Functions are declared with ", code%"=", " or ", code%"->"
-           | ". For instance the following are equivalent"
-         % clickable{"f{x, y} = [x * x + y * y] ** 0.5"}
-         % clickable{"f = {x, y} -> [x * x + y * y] ** 0.5"}
-
-         % | "It works inside object definitions as well, of course"
-         % clickable{"{add1{x} = x + 1, add2{x} = x + 2}"}
-
-         % | "Pattern matching is deeply integrated in Earl Grey. "
-           | "For instance:"
-         % clickable{"fact{match} =
-   0 or 1 -> 1
-   n -> n * fact{n - 1}
-"}
-
-         clickable{"next"}, " => type checking and coercion"
-
-      .card %
-         h3 % "Type checking and coercion"
-         mktable2{{...}} with
-            with | % "Type checking"
-                 | clickable_row{"String? .hello", "Number? 1", "Array? .nope", "R\"x$\"? .simplex"}
-            with | % "Coercion"
-                 | clickable_row{"String! {1, 2}", "Number! \"3.14\"", "Array! .yep"}
-
-         % | "Both type checking and coercion can be used in patterns."
-           | " Observe the difference in behavior of the following functions "
-           | " (try on ", clickable{"f{1, \"2\"}"}, ")"
-         % clickable{"f{x, y} = x + y"}
-         % clickable{"f{Number? x, Number? y} = x + y"}
-         % clickable{"f{Number! x, Number! y} = x + y"}
-
-         % | "Functions naturally act as coercers: "
-           | clickable{"parseInt! x = \"99\""}
-
-         h4 % "Predicates"
-         % | "You can create your own predicates with the "
-           | code%"predicate", " builtin"
-         % clickable{"predicate! even{x} = x mod 2 == 0"}
-         % clickable_row{"even? x = 1", "even? x = 2"}
-
-         clickable{"next"}, " => classes"
-
-      .card %
-         h3 % "Classes"
-         % | "Classes are declared with the ", code%"class"
-           | " macro. As a convenience, @ can be used to"
-           | " refer to fields and members of the instance."
-         % clickable{"class Person:
-   constructor{name, age, job} =
-      @name = name
-      @age = age
-      @job = job
-   hello{} =
-      \"Hello, I am \" + @name + \", \" + @age + \", and I am a \" + @job
-"}
-         % | "The ", code%"new", " keyword is optional."
-           | " I prefer to avoid it."
-         % clickable{"Person{.Sonia, 25, .baker}"}
-         % clickable{"Person{.Jack, 56, \"serial murderer\"}.hello{}"}
-         clickable{"next"}, " => HTML generation"
-
-      .card %
-         h3 % "Here, let's have some fun"
-         % | "The ", code%"%", " operator creates structured data"
-           | " which is directly translated as HTML."
-         % clickable_row{"b % .hello", "i % .hello"}
-         % "We can print out a multiplication table!"
-         % clickable_row{"table % 1..10 each i ->
-   tr % 1..10 each j ->
-      td % i * j
-"}
-
-      .card %
-         h3 % "The end"
-         % | "This is the end of this humble tutorial,"
-           | " but you can keep messing around with the language,"
-           | " it's a lot of fun :)"
-
-   }
