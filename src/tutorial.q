@@ -1,5 +1,5 @@
 
-tut0 ->
+tut0 -->
 
   === Keyboard controls
 
@@ -12,7 +12,7 @@ tut0 ->
 
 
 
-tut1 ->
+tut1 -->
 
   === Basics
 
@@ -36,7 +36,7 @@ tut1 ->
   /next => variables
 
 
-tut2 ->
+tut2 -->
 
   === Variables
 
@@ -70,7 +70,7 @@ tut2 ->
   /next => data structures
 
 
-tut3 ->
+tut3 -->
 
   === Data structures
 
@@ -100,7 +100,7 @@ tut3 ->
   /next => control structures
 
 
-tut4 ->
+tut4 -->
 
   === Control structures
 
@@ -123,7 +123,7 @@ tut4 ->
   /next => control structures \[2\]
 
 
-tut5 ->
+tut5 -->
 
   === Control structures \[2\]
 
@@ -152,7 +152,7 @@ tut5 ->
   /next => each
 
 
-tut6 ->
+tut6 -->
 
   === `each
 
@@ -187,7 +187,7 @@ tut6 ->
   /next => functions
 
 
-tut7 ->
+tut7 -->
 
   === Functions
 
@@ -212,21 +212,21 @@ tut7 ->
   /next => type checking and coercion
 
 
-tut8 ->
+tut8 -->
 
   === Type checking and coercion
 
-  | __[Type checking] | / String? .hello / Number? 1 / Array? .nope / R\"x$\"? .simplex
+  | __[Type checking] | / String? .hello / Number? 1 / Array? .nope / R"x$"? .simplex
   | __Coercion        | / String! {1, 2} / Number! "3.14" / Array! .yep
 
   Both type checking and coercion can be used in patterns. Observe the
-  difference in behavior of the following functions (try on /f{1, "2"}):
+  difference in behavior of the following functions:
 
-  / f{x, y} = x + y
+  / f{1, "2"} where f{x, y} = x + y
 
-  / f{Number? x, Number? y} = x + y
+  / f{1, "2"} where f{Number? x, Number? y} = x + y
 
-  / f{Number! x, Number! y} = x + y
+  / f{1, "2"} where f{Number! x, Number! y} = x + y
 
   Functions naturally act as coercers:
 
@@ -244,7 +244,7 @@ tut8 ->
   /next => classes
 
 
-tut9 ->
+tut9 -->
 
   === Classes
 
@@ -269,7 +269,7 @@ tut9 ->
   /next => HTML generation
 
 
-tut10 ->
+tut10 -->
 
   === Here, let's have some fun
 
@@ -288,7 +288,7 @@ tut10 ->
   /next => the end
 
 
-tut11 ->
+tut11 -->
 
   === The end
 

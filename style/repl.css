@@ -303,6 +303,16 @@ html {
     padding: 0.2em;
 }
 
+.card .help {
+    margin: 2px;
+    display: inline-block;
+    cursor: pointer;
+    font-family: monospace;
+    white-space: pre;
+    font-weight: bold;
+    color: #88f;
+}
+
 .card .clickable {
     border: 2px solid #ddd;
     margin: 2px;

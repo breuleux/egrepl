@@ -1,6 +1,6 @@
 
 require:
-   "quaint" as quaint
+   quaint
 
 provide: make_cards
 
@@ -28,13 +28,17 @@ make_cards{repr}{repl} =
                th % recur{k, repr}
                td % recur{v, repr}
 
-   clickable{code, text} =
+   clickable{code, text = null} =
       click{e} =
          e.preventDefault{}
          repl.process{code}
          repl.sink{}
          jQuery{repl.input}.focus{}
-      .clickable [onclick = click] %
+      cls = match code:
+         R"^help"? -> ".help"
+         else -> ".clickable"
+      ^cls %
+         onclick = click
          text or code
 
    clickable_row{*items} =
@@ -78,9 +82,14 @@ make_cards{repr}{repl} =
                getcode{code}
                label.location.text{}
 
-      "topic -> contents"{engine, node, {=> topic, => contents}} =
+      "topic --> contents"{engine, node, {=> topic, => contents}} =
          cards[topic.location.text{}] =
             .card % engine.run{contents}
+
+      "topic --> desc --> contents"{engine, node, {=> topic, => desc, => contents}} =
+         cards[topic.location.text{}] =
+            [.card % engine.run{contents}] &:
+               {description = engine.run{desc}}
 
    items{components} each {spec, fn} ->
       dispatch.register with quaint.Spec{spec, fn}
@@ -104,6 +113,7 @@ make_cards{repr}{repl} =
          cards["tut" + String{i}]
       i += 1
 
+   tutorial.description = "Earl Grey tutorial"
    cards.tutorial = tutorial
 
    cards.topics = .card %
@@ -112,6 +122,13 @@ make_cards{repr}{repl} =
          {clickable{"help topics"}, "List all help topics"}
          {clickable{"help variables"}, "Declaring and setting variables"}
          {clickable{"help blocks"}, "Blocks and indent rules"}
+   cards.topics.description = "Help starting point"
+
+   cards.index = .card %
+      h3 % "Index"
+      mktable2 with
+         items{cards}.sort{} each {k, v} when not R"^tut[0-9]+"? k ->
+            {clickable{"help " + k, k}, v.description}
 
    cards
 
