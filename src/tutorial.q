@@ -11,7 +11,7 @@ tut0 -->
 
   ==== What to do from here
 
-  * Peruse /help as a quick start
+  * Peruse help/help as a quick start
   * Consult the index/[help index] for a list of all help topics
   * Look at examples/[help examples]
   * ... or simply type or click /next to start the __tutorial!

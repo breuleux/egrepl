@@ -28,6 +28,13 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
          \ or "with" or "where" or "each"
          +" " or end
 
+      lowprio1 = R'
+         "=" or "=>" or "->" or "%" or ":"
+         +" " or end
+      lowprio2 = R'
+         "with" or "where" or "each"
+         +" " or end
+
       op = R'
          start
          + in "+\\-*/~^<>=%&|?!@#.:'"
@@ -62,13 +69,18 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
       token{stream, state} =
 
          if stream.sol{}:
-            state.sol = true
-            index = state.nest.length - 1
-            match state.nest[index]:
-               {a, _, _} ->
-                  state.nest[index] = {a, stream.indentation{}, false}
-               else ->
-                  pass
+            then:
+               state.sol = true
+               index = state.nest.length - 1
+               match state.nest[index]:
+                  {a, _, _} ->
+                     state.nest[index] = {a, stream.indentation{}, false}
+                  else ->
+                     pass
+            else:
+               state.sol = false
+
+         spaces = stream.eatSpace{}
 
          result = match state.mode:
 
@@ -80,18 +92,41 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      "string"
                   ";" ->
                      stream.skipToEnd{}
+                     state.previous = .comment
                      "comment"
-                  when stream.match{R"\\.[A-Za-z0-9$]+"} ->
+                  when stream.match{"..."} ->
+                     state.previous = .id
+                     "ellipsis"
+                  when stream.match{R"\\.[A-Za-z0-9_$]+"} ->
                      state.previous = .id
                      "string"
                   when stream.match{R"@[A-Za-z0-9$]+"} ->
                      state.previous = .id
                      "attribute"
+                  when stream.match{R"#[A-Za-z0-9$]+"} ->
+                     state.previous = .id
+                     "tag"
                   when stream.match{R"pass|return|break|continue|match"} ->
                      state.previous = .id
                      "keyword"
+                  when stream.match{re.lowprio1} ->
+                     state.previous = .lowprio
+                     "operator"
+                  when stream.match{re.lowprio2} ->
+                     state.previous = .lowprio
+                     "wordop"
+                  when stream.match{re.op}
+                       \ or stream.match{re.op4} ->
+                     state.previous = .op
+                     "operator"
+                  when stream.match{re.op3} ->
+                     state.previous = .op
+                     "wordop"
                   match when stream.match{re.id} ->
                      match when R"lowprio|comma"? state.previous or state.sol ->
+                        when stream.match{R" +(with|where|when|and|not|or|in|mod|each|as)( |$)", false} ->
+                           state.previous = .id
+                           "variable"
                         when stream.match{R" *:| +[A-Za-z0-9$\\[\\{\"]", false} ->
                            state.previous = .id
                            "keyword"
@@ -107,14 +142,6 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                   when stream.match{re.numr} or stream.match{re.num} ->
                      state.previous = .id
                      "number"
-                  when stream.match{re.lowprio} ->
-                     state.previous = .lowprio
-                     "operator"
-                  when stream.match{re.op}
-                       \ or stream.match{re.op3}
-                       \ or stream.match{re.op4} ->
-                     state.previous = .op
-                     "operator"
                   when stream.match{re.op2_open} ->
                      state.previous = .lowprio
                      state.nest.push with

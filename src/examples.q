@@ -5,8 +5,7 @@ examples --> List of examples -->
 
   Click on an example's name to view and execute the code associated
   to it. If you want to edit the code, you can press `Up to recall it
-  from history, `Control-M to trigger multiline mode (if necessary),
-  and `Control-Enter to resubmit.
+  from history and `Enter or `[Shift-Enter] to resubmit.
 
 
   ==== Classics
@@ -33,6 +32,16 @@ examples --> List of examples -->
         n -> n * fact{n - 1}
 
      fact{15}
+
+  FizzBuzz /
+    fizzbuzz{n} =
+       1..n each
+          i when i mod 15 == 0 -> "FizzBuzz"
+          i when i mod 3 == 0 -> "Fizz"
+          i when i mod 5 == 0 -> "Buzz"
+          i -> i
+
+    fizzbuzz{100}
 
   The "99 bottles of beer" song (long output) /
      bottle{match} =

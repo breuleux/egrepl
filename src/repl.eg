@@ -247,7 +247,7 @@ Error.prototype["::repr"] = {} ->
 
 class Repl:
 
-   constructor{@box, @target, @inputbox, @textarea, @evaluator} =
+   constructor{@box, @target, @inputbox, @textarea, @evaluator, @target2} =
 
       @url = "<repl>"
       @gen = eg.Generator{true}
@@ -272,6 +272,7 @@ class Repl:
          {
             indentUnit = 3
             viewportMargin = 1/0
+            theme = .repl
             ;; lineNumbers = true
          }
 
@@ -313,6 +314,18 @@ class Repl:
          "Shift-Enter"{cm} =
             @submit{}
 
+         "Ctrl-Up"{cm} =
+            if [@cursor > 0]:
+               @cm.setValue with @history[-- @cursor]
+               @cm.setCursor{@cm.lineCount{}, 0}
+               @sink{}
+
+         "Ctrl-Down"{cm} =
+            if [@cursor < @history.length - 1]:
+               @cm.setValue with @history[++ @cursor]
+               @cm.setCursor{0, @cm.getLine{0}.length}
+               @sink{}
+
          Up{match cm} =
             when @cursor > 0 and @cm.getCursor{}.line === 0 ->
                @cm.setValue with @history[-- @cursor]
@@ -349,8 +362,18 @@ class Repl:
       @cm.setSize{.auto, .auto}
 
    sink{} =
+      console.log with "NOOO"
       setTimeout{..., 0} with {} ->
          jQuery{@box}.scrollTop{@box.scrollHeight}
+
+   sink2{} =
+      console.log with "HERE"
+      setTimeout{..., 0} with {} ->
+         match.indexable @target2.childNodes:
+            {*, ch} ->
+               jQuery{@target2}.scrollTop{@target2.scrollHeight - jQuery{ch}.height{}}
+            else ->
+               pass
 
    add_to_history{text} =
       hl = @history.length
@@ -371,9 +394,8 @@ class Repl:
    submit{} =
       @set_multiline{false}
       text = @cm.getValue{}
-      @process{text}
       @cm.setValue{""}
-      @sink{}
+      @process{text, true, true}
 
    set_multiline{match @multiline} =
       true? ->
@@ -453,49 +475,62 @@ class Repl:
          handle{e} =
             #failure{e}
 
-   process{text, display_in = true} =
+   highlight{text} =
+      hl = {}
+      CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
+         hl.push with
+            if style:
+               then: span ^[".cm-" + style] % text
+               else: span % text
+      ".cm-s-repl" %
+         hl
+
+   process{text, display_in = true, var sink = false} =
       @add_to_history{text}
       real_text = text ;; "\n" + text + "\n"
-      node = make_dom with
-         .io %
-            if display_in:
-               then:
-                  hl = {}
-                  CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
-                     hl.push with
-                        if style:
-                           then: span ^[".cm-" + style] % text
-                           else: span % text
-                  .[in] %
-                     .inbanner %
-                     .entry %
-                        ".cm-s-default" %
-                           hl
-               else:
-                  ""
-            match @eval{real_text}:
-               when text.trim{} === "" ->
-                  ""
-               #success{undefined?} ->
-                  ""
-               #success{Node? n} ->
-                  .display %
-                     n
-                     ;; .displaybanner %
-                     ;; .result % n
-               #success{value} ->
-                  .out %
-                     .outbanner %
-                     .result % .eg % repr{value}
-               #failure{error} ->
-                  .err %
-                     .errbanner %
-                     .result % .eg % repr{error}
+      var target = @target
+      sink and= 1
+      node1 = make_dom with
+         if display_in:
+            then:
+               .[in] %
+                  .inbanner %
+                  .entry % @highlight{text}
+            else:
+               ""
+      node2 = make_dom with
+         match @eval{real_text}:
+            when text.trim{} === "" ->
+               ""
+            #success{undefined?} ->
+               ""
+            #success{Node? n} ->
+               if [.card %]? n:
+                  target = @target2
+                  sink and= 2
+               .display %
+                  n
+                  ;; .displaybanner %
+                  ;; .result % n
+            #success{value} ->
+               .out %
+                  .outbanner %
+                  .result % .eg % repr{value}
+            #failure{error} ->
+               .err %
+                  .errbanner %
+                  .result % .eg % repr{error}
 
       name = gensym{}
-      node.id = name
+      node2.id = name
 
-      @target.appendChild{node}
+      @target.appendChild{node1}
+      target.appendChild{node2}
+
+      match sink:
+         1 -> @sink{}
+         2 -> @sink2{}
+         else -> pass
 
       collapse{e} =
          e.stopPropagation{}
@@ -540,8 +575,8 @@ make_cards{repl} =
    clickable{code, text = null} =
       click{e} =
          e.preventDefault{}
-         repl.process{code}
-         repl.sink{}
+         repl.process{code, true, true}
+         ;; repl.sink{}
          ;; jQuery{repl.input}.focus{}
          repl.cm.focus{}
       cls = match code:
@@ -549,15 +584,15 @@ make_cards{repl} =
          else -> ".clickable"
       ^cls %
          onclick = click
-         text or code
+         text or repl.highlight{code}
 
-   clickable_row{*items} =
+   clickable_row{items} =
       span %
          items each
             first item ->
-               clickable{item}
+               clickable{*item}
             item ->
-               span % [span.separator % "", clickable{item}]
+               span % [span.separator % "", clickable{*item}]
 
    getcode{node} =
       code = shed{node}.location.text{}
@@ -585,22 +620,26 @@ make_cards{repl} =
          #text{""} ->
             match quaint.collapse{"/", code}:
                {x} -> clickable{getcode{x}}
-               {*xs} -> clickable_row{*xs2} where
-                  xs2 = xs each x -> getcode{x}
+               {*xs} -> clickable_row{xs2} where
+                  xs2 = xs each x -> {z, null} where z = getcode{x}
          label ->
             clickable with
                getcode{code}
                shed{label}.location.text{}
 
       "maybe label /? topic"{engine, node, {label => match, => topic}} =
+         do:
+            helpify{x} =
+               "help \"" + x + "\""
          #text{""} ->
             match quaint.collapse{"/", topic}:
-               {x} -> clickable{"help " + code, code} where code = getcode{x}
-               {*xs} -> clickable_row{*xs2} where
-                  xs2 = xs each x -> getcode{"help " + code, code} where code = getcode{x}
+               {x} -> clickable{helpify{code}, code} where code = getcode{x}
+               {*xs} -> clickable_row{xs2} where
+                  xs2 = xs each x ->
+                     {helpify{code}, code} where code = getcode{x}
          label ->
             clickable with
-               getcode{"help " + topic}
+               helpify{getcode{topic}}
                shed{label}.location.text{}
 
       "topic --> contents"{engine, node, {=> topic, => contents}} =
@@ -622,6 +661,7 @@ make_cards{repl} =
       static_read "basic.q"
       static_read "cards.q"
       static_read "examples.q"
+      static_read "advanced.q"
    }
 
    Q = quaint.Engine{dispatch}
@@ -658,8 +698,10 @@ setup{} =
       document.getElementById{"inputbox"}
       document.getElementById{"code"}
       eval
+      document.getElementById{"help"}
 
    {window._cards, engine} = make_cards{repl}
+   ;; {window._cards, engine} = {{=}, null}
    window.quaint = quaint & {engine = engine}
 
    repl.eval with "
