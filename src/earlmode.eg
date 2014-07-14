@@ -170,17 +170,19 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
             else ->
                inner + add
 
+      blankLine{state} =
+         state.sol = true
+         index = state.nest.length - 1
+         match state.nest[index]:
+            {a, _, _} ->
+               state.nest[index] = {a, 0, false}
+            else ->
+               pass
+
       lineComment = ";;"
 
-      electricChars = "]}"
+      electricInput = R'[start, *" ", in "]}", end]
 
-      ;; indent{state, line} =
 
-      ;;    which = match line:
-      ;;       R'[start, in "]}"]? -> -2
-      ;;       else -> -1
-
-      ;;    match state.nest[state.nest.length + which]:
-      ;;       {}
 
 

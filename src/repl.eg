@@ -277,29 +277,38 @@ class Repl:
 
       @cm.addKeyMap{{...}} with
 
+         ;; Enter{match cm} =
+         ;;    when @multiline ->
+         ;;       CodeMirror.Pass
+         ;;    else ->
+         ;;       e = cm.lineCount{} - 1
+         ;;       state = cm.getStateAfter{e}
+         ;;       match:
+         ;;          when state.mode !== .code
+         ;;               \ or state.nest.length > 1
+         ;;               \ or R"lowprio|op"? state.previous
+         ;;               \ or [state.nest[0][1] > 0 and not R"^\\s*$"? cm.getLine{e}] ->
+         ;;             CodeMirror.Pass
+         ;;          else ->
+         ;;             @submit{}
+
          Enter{match cm} =
-            when @multiline ->
+            do:
+               e = cm.lineCount{} - 1
+            when cm.getCursor{}.line < e ->
                CodeMirror.Pass
             else ->
-               e = cm.lineCount{} - 1
                state = cm.getStateAfter{e}
                match:
-                  when state.nest.length > 1
+                  when state.mode !== .code
+                       \ or state.nest.length > 1
                        \ or R"lowprio|op"? state.previous
                        \ or [state.nest[0][1] > 0 and not R"^\\s*$"? cm.getLine{e}] ->
                      CodeMirror.Pass
                   else ->
                      @submit{}
 
-               ;; {=> line, => ch} = cm.getCursor{}
-               ;; re = R"(=|->|%|:|with|where|each)$"
-               ;; match line:
-               ;;    do: txt = cm.getLine{0}
-               ;;    0 when ch == txt.length and re? txt ->
-               ;;       @set_multiline{true}
-               ;;       CodeMirror.Pass
-               ;;    else ->
-               ;;       @submit{}
+         "Ctrl-Enter" = "newlineAndIndent"
 
          "Shift-Enter"{cm} =
             @submit{}
@@ -308,7 +317,7 @@ class Repl:
             when @cursor > 0 and @cm.getCursor{}.line === 0 ->
                @cm.setValue with @history[-- @cursor]
                @cm.setCursor{@cm.lineCount{}, 0}
-               @set_multiline{@cm.lineCount{} > 1}
+               ;; @set_multiline{@cm.lineCount{} > 1}
                @sink{}
             else ->
                CodeMirror.Pass
@@ -318,15 +327,15 @@ class Repl:
                   \ @cm.getCursor{}.line === [@cm.lineCount{} - 1]] ->
                @cm.setValue with @history[++ @cursor]
                @cm.setCursor{0, @cm.getLine{0}.length}
-               @set_multiline{@cm.lineCount{} > 1}
+               ;; @set_multiline{@cm.lineCount{} > 1}
                @sink{}
             else ->
                CodeMirror.Pass
 
          Tab = "indentAuto"
 
-         "Ctrl-M"{_} =
-            @set_multiline{not @multiline}
+         ;; "Ctrl-M"{_} =
+         ;;    @set_multiline{not @multiline}
 
          "Ctrl-L"{_} =
             jQuery{@target}.empty{}
@@ -583,6 +592,17 @@ make_cards{repl} =
                getcode{code}
                shed{label}.location.text{}
 
+      "maybe label /? topic"{engine, node, {label => match, => topic}} =
+         #text{""} ->
+            match quaint.collapse{"/", topic}:
+               {x} -> clickable{"help " + code, code} where code = getcode{x}
+               {*xs} -> clickable_row{*xs2} where
+                  xs2 = xs each x -> getcode{"help " + code, code} where code = getcode{x}
+         label ->
+            clickable with
+               getcode{"help " + topic}
+               shed{label}.location.text{}
+
       "topic --> contents"{engine, node, {=> topic, => contents}} =
          cards[topic.location.text{}] =
             .card % engine.run{contents}
@@ -619,14 +639,6 @@ make_cards{repl} =
    tutorial.description = "Earl Grey tutorial"
    cards.tutorial = tutorial
 
-   cards.topics = .card %
-      h3 % "Help topics"
-      mktable2{{...}} with
-         {clickable{"help topics"}, "List all help topics"}
-         {clickable{"help variables"}, "Declaring and setting variables"}
-         {clickable{"help blocks"}, "Blocks and indent rules"}
-   cards.topics.description = "Help starting point"
-
    cards.index = .card %
       h3 % "Index"
       mktable2 with
@@ -634,7 +646,7 @@ make_cards{repl} =
             {k, v} when not R"^tut[0-9]+"? k ->
                {clickable{"help " + k, k}, v.description}
 
-   cards
+   {cards, Q}
 
 
 
@@ -647,13 +659,15 @@ setup{} =
       document.getElementById{"code"}
       eval
 
-   window._cards = make_cards{repl}
+   {window._cards, engine} = make_cards{repl}
+   window.quaint = quaint & {engine = engine}
 
    repl.eval with "
 
       globals:
          _cards, alert, document
          window, _current, _next, _help
+         quaint
 
       var _current = 0
 
@@ -672,7 +686,10 @@ setup{} =
          do: h = form.env.mark{'_help}
          #symbol{topic} or #value{topic} ->
             '[^h]{^=topic}
-         #void{} -> '[^h]{}
+         #void{} -> '[^h]{\"\"}
+
+      macro Q{_, _, _, arg}:
+         '[.card % quaint.engine.run{^arg}]
    "
 
    repl.process{"_cards.tutorial[0]", false}

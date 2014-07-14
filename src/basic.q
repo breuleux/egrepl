@@ -1,5 +1,15 @@
 
 
+topics --> Help starting point -->
+
+   === Help
+
+   ==== Basic topics
+
+   The /?index contains a list of all help topics.
+
+
+
 interface --> REPL interface (keyboard bindings etc.) -->
 
   === Keyboard controls
