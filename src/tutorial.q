@@ -1,14 +1,20 @@
 
 tut0 -->
 
-  === Keyboard controls
+  === The Earl Grey programming language
 
-  | `[Up/Down]           | Navigate history
-  | `[Enter/Shift-Enter] | Evaluate an expression
-  | `[Control-l]         | Clear the screen
-  | `[Control-m]         | Toggle multiline mode
+  Earl Grey is a new language that compiles to JavaScript. Why should
+  you care? Good question!
 
-  Type /next to continue with the tutorial.
+  * Advanced [pattern matching]/[help patterns]
+  * Arbitrary new features can be defined with macros/[help macros]
+
+  ==== What to do from here
+
+  * Peruse /help as a quick start
+  * Consult the index/[help index] for a list of all help topics
+  * Look at examples/[help examples]
+  * ... or simply type or click /next to start the __tutorial!
 
 
 

@@ -8,8 +8,10 @@ html {
     height: 98%;
     overflow: hidden;
 }
+
 #box, body {
     height: 100%;
+    font-size: 12pt;
 }
 
 #box {
@@ -17,16 +19,26 @@ html {
     overflow: auto;
 }
 
-#input, .entry, .result {
+.entry, .result {
     outline: 0px;
     padding-left: 0.5em;
     border-left: 3px solid white;
     height: auto;
 }
 
-#input.multiline {
-    border-left: 3px solid #8a8;
+.entry {
+    line-height: 1;
 }
+
+.entry .cm-s-default {
+    padding-left: 1px;
+    padding-top: 2px;
+}
+
+
+/* #input.multiline { */
+/*     border-left: 3px solid #8a8; */
+/* } */
 
 .collapsed:before {
     content: "...";
@@ -39,9 +51,9 @@ html {
     white-space: pre;
 }
 
-.hasinput {
-    align-items: flex-start;
-}
+/* .hasinput { */
+/*     align-items: flex-start; */
+/* } */
 
 .display {
     display: flex;
@@ -119,6 +131,8 @@ html {
     color: #000;
     /* border-bottom: 2px dotted #888; */
     white-space: pre;
+    max-height: 200px;
+    overflow: auto;
 }
 .eg .function {
     color: blue;
@@ -252,21 +266,23 @@ html {
     font-family: 'Open Sans', 'Trebuchet MS', Trebuchet, 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     font-size: 12pt;
     padding: 10px;
-    border: 2px solid #ddf;
-    border-radius: 10px;
-    background-color: #fff;
+    /* border: 2px solid #ddf; */
+    /* border-radius: 10px; */
+    /* background-color: #f8f8f8; */
     width: 700px;
 }
 
 .card table {
     border-collapse: collapse;
     margin: 5px;
+    border: 2px solid black;
 }
 
 .card th, .card td {
     padding-left: 10px;
     padding-right: 10px;
     text-align: left;
+    border: 1px solid #ccc;
 }
 
 /* .card tr { */
@@ -314,7 +330,7 @@ html {
 }
 
 .card .clickable {
-    border: 2px solid #ddd;
+    border: 2px solid #d8d8ff;
     margin: 2px;
     display: inline-block;
     cursor: pointer;
@@ -330,4 +346,27 @@ html {
 .card .blocks > * {
     margin-top: 8px;
     margin-bottom: 8px;
+}
+
+
+.CodeMirror {
+  /* border: 1px solid #eee; */
+  height: auto;
+}
+
+.CodeMirror-scroll {
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+#inputbox {
+  width: 100%;
+  padding-top: 1px;
+  padding-left: 5px;
+  border-left: 3px solid #fff;
+}
+
+#inputbox.multiline {
+  width: 100%;
+  border-left: 3px solid #8a8;
 }

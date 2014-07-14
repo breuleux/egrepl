@@ -3,7 +3,7 @@
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="style/repl.css" />
-    <!-- <link rel="stylesheet" type="text/css" href="style/codemirror.css" /> -->
+    <link rel="stylesheet" type="text/css" href="style/codemirror.css" />
     <!-- <script type="text/javascript" src="scripts/codemirror.js"></script> -->
     <script type="text/javascript" src="scripts/jquery.js"></script>
     <script type="text/javascript" src="scripts/eg.js"></script>
@@ -16,40 +16,43 @@
 
       <div class="in hasinput">
         <div class="inbanner"></div>
-        <div contentEditable="true" id="input"></div>
+        <div id="inputbox"><textarea id="code"></textarea></div>
       </div>
-
-      <!-- <textarea id="testta"></textarea> -->
     </div>
 
-
-
     <script>
+      <!-- var editor = CodeMirror.fromTextArea(document.getElementById("code"), { -->
+      <!--   lineNumbers: true, -->
+      <!--   viewportMargin: Infinity -->
+      <!-- }); -->
+      repl = require("repl").setup();
 
-        //CodeMirror.fromTextArea{document.getElementById{"testta"}} with {indentUnit = 3}
+        <!-- //CodeMirror.fromTextArea{document.getElementById{"testta"}} with {indentUnit = 3} -->
+        <!-- CodeMirror.fromTextArea(document.getElementById("testta"), {indentUnit: 3}) -->
 
-        Repl = require("repl").Repl
-        repl = Repl(document.getElementById("box"),
-                    document.getElementById("interactive"),
-                    document.getElementById("input"),
-                    eval);
-        cards = require("repl").make_cards(repl)
-        _current = 0;
-        function _next() {
-           return cards.tutorial[++_current]
-        }
-        function _help(topic) {
-           if (topic)
-              return cards[topic] || ("Invalid help topic: \"" + topic + "\"")
-           else
-              return cards["topics"]
-        }
-        repl.eval("macro next{_, _, form, _}: '[^form.env.mark{'_next}]{}")
-        repl.eval("macro help{_, _, form, match}: [do: h = form.env.mark{'_help}, #symbol{topic} or #value{topic} -> '[^h]{^=topic}, #void{} -> '[^h]{}]")
-        repl.eval("globals: [cards, alert, document, window, _next, _help]");
-        // repl.eval("globals: [CodeMirror]");
-        repl.process("cards.tutorial[0]", false);
-        $("#input").focus();
+        <!-- Repl = require("repl").Repl -->
+        <!-- repl = Repl(document.getElementById("box"), -->
+        <!--             document.getElementById("interactive"), -->
+        <!--             document.getElementById("input"), -->
+        <!--             eval); -->
+        <!-- cards = require("repl").make_cards(repl) -->
+        <!-- _current = 0; -->
+        <!-- function _next() { -->
+        <!--    return cards.tutorial[++_current] -->
+        <!-- } -->
+        <!-- function _help(topic) { -->
+        <!--    if (topic) -->
+        <!--       return cards[topic] || ("Invalid help topic: \"" + topic + "\"") -->
+        <!--    else -->
+        <!--       return cards["topics"] -->
+        <!-- } -->
+        <!-- repl.eval("macro next{_, _, form, _}: '[^form.env.mark{'_next}]{}") -->
+        <!-- repl.eval("macro help{_, _, form, match}: [do: h = form.env.mark{'_help}, #symbol{topic} or #value{topic} -> '[^h]{^=topic}, #void{} -> '[^h]{}]") -->
+        <!-- repl.eval("globals: [cards, alert, document, window, _next, _help]"); -->
+        <!-- // repl.eval("globals: [CodeMirror]"); -->
+        <!-- repl.process("cards.tutorial[0]", false); -->
+        <!-- $("#input").focus(); -->
+
         <!-- repl.process('{1, 2, true, false, "hello", "", {}}') -->
         <!-- repl.process('{apple = 1, banana = 2}') -->
         <!-- repl.process('{a = 1\n b = 2\n c = 3\n d = 4}') -->

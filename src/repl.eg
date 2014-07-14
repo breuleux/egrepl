@@ -12,14 +12,20 @@ require:
    "earl-grey/parse" ->
       parse
    quaint
+   codemirror as CodeMirror
+   "codemirror/addon/runmode/runmode"
+   "./earlmode"
+   "./javascript"
 
 provide:
-   Repl, kb.Interactor as Interactor, parse, tokenize, eg.Source as Source
+   Repl, kb.Interactor as Interactor
+   parse, tokenize, eg.Source as Source
    make_cards
+   setup
 
 globals:
-   document, window, alert, jQuery, setTimeout, Showdown
-
+   document, window, alert, jQuery, setTimeout
+   ;; CodeMirror
 
 gensym = GenSym{"io_"}
 
@@ -241,26 +247,101 @@ Error.prototype["::repr"] = {} ->
 
 class Repl:
 
-   constructor{box, target, input, evaluator} =
+   constructor{@box, @target, @inputbox, @textarea, @evaluator} =
 
       @url = "<repl>"
       @gen = eg.Generator{true}
-      @evaluator = evaluator
 
-      @box = box
-      @target = target
-      @input = input
+      ;; @input = input
       @multiline = false
 
-      @interactor = kb.Interactor{{=}}
+      @setup_cm{@textarea}
+
+      ;; @interactor = kb.Interactor{{=}}
       @set_multiline{false}
-      @interactor.install{@input}
+      ;; @interactor.install{@input}
 
       @cursor = 0
       @history = {""}
 
+
+   setup_cm{textarea} =
+
+      @cm = CodeMirror.fromTextArea with
+         textarea
+         {
+            indentUnit = 3
+            viewportMargin = 1/0
+            ;; lineNumbers = true
+         }
+
+      @cm.addKeyMap{{...}} with
+
+         Enter{match cm} =
+            when @multiline ->
+               CodeMirror.Pass
+            else ->
+               e = cm.lineCount{} - 1
+               state = cm.getStateAfter{e}
+               match:
+                  when state.nest.length > 1
+                       \ or R"lowprio|op"? state.previous
+                       \ or [state.nest[0][1] > 0 and not R"^\\s*$"? cm.getLine{e}] ->
+                     CodeMirror.Pass
+                  else ->
+                     @submit{}
+
+               ;; {=> line, => ch} = cm.getCursor{}
+               ;; re = R"(=|->|%|:|with|where|each)$"
+               ;; match line:
+               ;;    do: txt = cm.getLine{0}
+               ;;    0 when ch == txt.length and re? txt ->
+               ;;       @set_multiline{true}
+               ;;       CodeMirror.Pass
+               ;;    else ->
+               ;;       @submit{}
+
+         "Shift-Enter"{cm} =
+            @submit{}
+
+         Up{match cm} =
+            when @cursor > 0 and @cm.getCursor{}.line === 0 ->
+               @cm.setValue with @history[-- @cursor]
+               @cm.setCursor{@cm.lineCount{}, 0}
+               @set_multiline{@cm.lineCount{} > 1}
+               @sink{}
+            else ->
+               CodeMirror.Pass
+
+         Down{match cm} =
+            when [@cursor < @history.length - 1 and
+                  \ @cm.getCursor{}.line === [@cm.lineCount{} - 1]] ->
+               @cm.setValue with @history[++ @cursor]
+               @cm.setCursor{0, @cm.getLine{0}.length}
+               @set_multiline{@cm.lineCount{} > 1}
+               @sink{}
+            else ->
+               CodeMirror.Pass
+
+         Tab = "indentAuto"
+
+         "Ctrl-M"{_} =
+            @set_multiline{not @multiline}
+
+         "Ctrl-L"{_} =
+            jQuery{@target}.empty{}
+
+         "Ctrl-A" = "goLineStart"
+         "Ctrl-E" = "goLineEnd"
+         "Ctrl-K" = "killLine"
+
+      @cm.setOption{"mode", "earl-grey"}
+      ;; @cm.setOption{"mode", "javascript"}
+      @cm.setSize{.auto, .auto}
+
    sink{} =
-      jQuery{@box}.scrollTop{@box.scrollHeight}
+      setTimeout{..., 0} with {} ->
+         jQuery{@box}.scrollTop{@box.scrollHeight}
 
    add_to_history{text} =
       hl = @history.length
@@ -271,72 +352,86 @@ class Repl:
          @history.push{""}
       @cursor = @history.length - 1
 
+   ;; submit{} =
+   ;;    @set_multiline{false}
+   ;;    text = @input.textContent
+   ;;    @process{text}
+   ;;    @input.innerHTML = ""
+   ;;    @sink{}
+
    submit{} =
       @set_multiline{false}
-      text = @input.textContent
+      text = @cm.getValue{}
       @process{text}
-      @input.innerHTML = ""
+      @cm.setValue{""}
       @sink{}
 
-   begin_multiline{} =
-      @set_multiline{true}
-      ;; @input.innerHTML = @input.innerHTML + "\n   "
-      goto_end{@input}
-      insert_before_caret{"\n   "}
-      @sink{}
+   set_multiline{match @multiline} =
+      true? ->
+         jQuery{@inputbox}.addClass{.multiline}
+      false? ->
+         jQuery{@inputbox}.removeClass{.multiline}
 
-   set_multiline{x} = match x:
-      do:
-         previous{} =
-            if [@cursor > 0]:
-               @input.textContent = @history[-- @cursor]
-               goto_end{@input}
-               @sink{}
-         next{} =
-            if [@cursor < @history.length - 1]:
-               @input.textContent = @history[++ @cursor]
-               goto_end{@input}
-               @sink{}
-         common = {
-            "C-l"{} =
-               jQuery{@target}.empty{}
-            "S-Enter"{} =
-               @submit{}
-         }
+   ;; begin_multiline{} =
+   ;;    @set_multiline{true}
+   ;;    ;; @input.innerHTML = @input.innerHTML + "\n   "
+   ;;    goto_end{@input}
+   ;;    insert_before_caret{"\n   "}
+   ;;    @sink{}
 
-      === false ->
-         jQuery{@input}.removeClass{.multiline}
-         @interactor.set_bindings with common & {
-            "C-m"{} =
-               @set_multiline{true}
-               .break
-            "C-Enter"{} =
-               @begin_multiline{}
-               .break
-            Enter{} =
-               match @input.textContent:
-                  R"(=|->|%|:|with|where|each)$"? ->
-                     @begin_multiline{}
-                  other ->
-                     @submit{}
-            Up = previous
-            Down = next
-         }
+   ;; set_multiline{x} = match x:
+   ;;    do:
+   ;;       @multiline = x
+   ;;       previous{} =
+   ;;          if [@cursor > 0]:
+   ;;             @input.textContent = @history[-- @cursor]
+   ;;             goto_end{@input}
+   ;;             @sink{}
+   ;;       next{} =
+   ;;          if [@cursor < @history.length - 1]:
+   ;;             @input.textContent = @history[++ @cursor]
+   ;;             goto_end{@input}
+   ;;             @sink{}
+   ;;       common = {
+   ;;          "C-l"{} =
+   ;;             jQuery{@target}.empty{}
+   ;;          "S-Enter"{} =
+   ;;             @submit{}
+   ;;       }
 
-      === true ->
-         jQuery{@input}.addClass{.multiline}
-         @interactor.set_bindings with common & {
-            "C-m"{} =
-               @set_multiline{false}
-               .break
-            "C-Enter"{} =
-               @submit{}
-            Enter{} =
-               insert_before_caret{"\n"}
-               @sink{}
-            Tab{} =
-               insert_before_caret{"   "}
-         }
+   ;;    === false ->
+   ;;       jQuery{@input}.removeClass{.multiline}
+   ;;       @interactor.set_bindings with common & {
+   ;;          "C-m"{} =
+   ;;             @set_multiline{true}
+   ;;             .break
+   ;;          "C-Enter"{} =
+   ;;             @begin_multiline{}
+   ;;             .break
+   ;;          Enter{} =
+   ;;             match @input.textContent:
+   ;;                R"(=|->|%|:|with|where|each)$"? ->
+   ;;                   @begin_multiline{}
+   ;;                other ->
+   ;;                   @submit{}
+   ;;          Up = previous
+   ;;          Down = next
+   ;;       }
+
+   ;;    === true ->
+   ;;       jQuery{@input}.addClass{.multiline}
+   ;;       @interactor.set_bindings with common & {
+   ;;          "C-m"{} =
+   ;;             @set_multiline{false}
+   ;;             .break
+   ;;          "C-Enter"{} =
+   ;;             @submit{}
+   ;;          Enter{} =
+   ;;             insert_before_caret{"\n"}
+   ;;             @sink{}
+   ;;          Tab{} =
+   ;;             insert_before_caret{"   "}
+   ;;       }
 
    generate{text} =
       @gen.generate{eg.Source{text, @url}}
@@ -356,9 +451,17 @@ class Repl:
          .io %
             if display_in:
                then:
+                  hl = {}
+                  CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
+                     hl.push with
+                        if style:
+                           then: span ^[".cm-" + style] % text
+                           else: span % text
                   .[in] %
                      .inbanner %
-                     .entry % text or " "
+                     .entry %
+                        ".cm-s-default" %
+                           hl
                else:
                   ""
             match @eval{real_text}:
@@ -368,8 +471,9 @@ class Repl:
                   ""
                #success{Node? n} ->
                   .display %
-                     .displaybanner %
-                     .result % n
+                     n
+                     ;; .displaybanner %
+                     ;; .result % n
                #success{value} ->
                   .out %
                      .outbanner %
@@ -429,7 +533,8 @@ make_cards{repl} =
          e.preventDefault{}
          repl.process{code}
          repl.sink{}
-         jQuery{repl.input}.focus{}
+         ;; jQuery{repl.input}.focus{}
+         repl.cm.focus{}
       cls = match code:
          R"^help"? -> ".help"
          else -> ".clickable"
@@ -476,7 +581,7 @@ make_cards{repl} =
          label ->
             clickable with
                getcode{code}
-               label.location.text{}
+               shed{label}.location.text{}
 
       "topic --> contents"{engine, node, {=> topic, => contents}} =
          cards[topic.location.text{}] =
@@ -490,11 +595,13 @@ make_cards{repl} =
    items{components} each {spec, fn} ->
       dispatch.register with quaint.Spec{spec, fn}
 
-   cards = {=}
+   var cards = {=}
 
    files = {
       static_read "tutorial.q"
+      static_read "basic.q"
       static_read "cards.q"
+      static_read "examples.q"
    }
 
    Q = quaint.Engine{dispatch}
@@ -528,6 +635,51 @@ make_cards{repl} =
                {clickable{"help " + k, k}, v.description}
 
    cards
+
+
+
+setup{} =
+
+   repl = Repl with
+      document.getElementById{"box"}
+      document.getElementById{"interactive"}
+      document.getElementById{"inputbox"}
+      document.getElementById{"code"}
+      eval
+
+   window._cards = make_cards{repl}
+
+   repl.eval with "
+
+      globals:
+         _cards, alert, document
+         window, _current, _next, _help
+
+      var _current = 0
+
+      _next{} =
+         _current += 1
+         _cards.tutorial[_current]
+
+      _help{match} =
+         \"\" -> _cards.topics
+         topic -> _cards[topic] or [\"Invalid help topic: \\\"\" + topic + \"\\\"\"]
+
+      macro next{_, _, form, _}:
+         '[^form.env.mark{'_next}]{}
+
+      macro help{_, _, form, match}:
+         do: h = form.env.mark{'_help}
+         #symbol{topic} or #value{topic} ->
+            '[^h]{^=topic}
+         #void{} -> '[^h]{}
+   "
+
+   repl.process{"_cards.tutorial[0]", false}
+   ;; jQuery{"#input"}.focus{}
+   repl.cm.focus{}
+
+   repl
 
 
 

@@ -35,9 +35,7 @@ predicates --> Predicates (`[pred? x]) -->
   === Predicates
 
   The expression `[P? x] tests whether `x satisfies the __predicate
-  `P. `[P? x] is equivalent to `P["::check"]{x}, which means that any
-  object with a `[::check] method is technically a predicate. Here are
-  a few examples from the base language:
+  `P. Here are a few examples from the base language:
 
   / String? .hello / Number? 1 / Array? .nope / R"x$"? .simplex / true? 123
 
@@ -52,9 +50,18 @@ predicates --> Predicates (`[pred? x]) -->
   Note that predicates do not modify or transform their arguments, but
   projectors/[help projectors] can.
 
-  ==== Defining simple predicates
+  ==== Defining a predicate
 
-  You can easily create your own predicates with `[predicate!]
+  To evaluate `[P? x] EG tries each of the following, in sequence:
+
+  # `[P["::check"]{x}] must return a boolean.
+
+  # `instanceof{x, P}: if `P has no `[::check] method, `[P? x]
+    verifies that `x is an instance of `P.
+
+  ==== Simple predicates
+
+  You can create a predicate from a function with `[predicate!]
 
   /
      predicate! even{x} =
@@ -65,12 +72,6 @@ predicates --> Predicates (`[pred? x]) -->
   `[predicate!] wraps a function to define a `[::check] method. The
   function can still be called normally, e.g. /even{7}.
 
-  ==== Default behavior
-
-  If `P has no `[::check] method, `[P? x] verifies that `x is an
-  instance of `P. In other words, it is by default equivalent to the
-  JavaScript expression `[x instanceof P], although unlike JavaScript
-  this behavior can be easily customized.
 
 
 projectors --> Projectors (`[proj! x]) -->

@@ -1,0 +1,186 @@
+
+require:
+   codemirror as CodeMirror
+
+
+CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
+
+   re = {...} with
+      id = R'
+         start
+         in "a-zA-Z$_"
+         * in "a-zA-Z$_0-9"
+
+      numr = R'
+         start
+         {+d}, in "rR"
+         {+ in"A-Za-z0-9_"}
+         ?[".", {+ in "A-Za-z0-9_"}]
+      num = R'
+         start
+         {+ in "0-9_"}
+         ?[".", {+d}]
+         ?[in "eE", {? in "+-", + in "0-9_"}]
+
+      lowprio = R'
+         ;; +" "
+         "=" or "=>" or "->" or "%" or ":"
+         \ or "with" or "where" or "each"
+         +" " or end
+
+      op = R'
+         start
+         + in "+\\-*/~^<>=%&|?!@#.:'"
+      op2_open = R'
+         start
+         in "[{"
+      comma = R'
+         start, ","
+      op2_close = R'
+         start
+         in "}]"
+      op3 = R'
+         start
+         "with" or "where" or "when"
+           \ or "and" or "not" or "or"
+           \ or "in" or "mod"
+           \ or "each" or "as"
+         [+ in "+\\-*/~^<>=%&|?!@#.:'"] or boundary
+      op4 = R'
+         start
+         "`", {+ in "A-Za-z0-9_$"}, "`"
+
+   {...} with
+
+      startState{} = {
+         mode = .code
+         previous = null
+         sol = true
+         nest = {{0, 0, false}}
+      }
+
+      token{stream, state} =
+
+         if stream.sol{}:
+            state.sol = true
+            index = state.nest.length - 1
+            match state.nest[index]:
+               {a, _, _} ->
+                  state.nest[index] = {a, stream.indentation{}, false}
+               else ->
+                  pass
+
+         result = match state.mode:
+
+            .code ->
+               match stream.peek{}:
+                  "\"" ->
+                     stream.next{}
+                     state.mode = .string
+                     "string"
+                  ";" ->
+                     stream.skipToEnd{}
+                     "comment"
+                  when stream.match{R"\\.[A-Za-z0-9$]+"} ->
+                     state.previous = .id
+                     "string"
+                  when stream.match{R"@[A-Za-z0-9$]+"} ->
+                     state.previous = .id
+                     "attribute"
+                  when stream.match{R"pass|return|break|continue|match"} ->
+                     state.previous = .id
+                     "keyword"
+                  match when stream.match{re.id} ->
+                     match when R"lowprio|comma"? state.previous or state.sol ->
+                        when stream.match{R" *:| +[A-Za-z0-9$\\[\\{\"]", false} ->
+                           state.previous = .id
+                           "keyword"
+                        when stream.match{R" +[+\\-*/~^<>=%&|?!@#.:']+[A-Za-z0-9$\\[\\{]", false} ->
+                           state.previous = .id
+                           "keyword"
+                        else ->
+                           state.previous = .id
+                           "variable"
+                     else ->
+                        state.previous = .id
+                        "variable"
+                  when stream.match{re.numr} or stream.match{re.num} ->
+                     state.previous = .id
+                     "number"
+                  when stream.match{re.lowprio} ->
+                     state.previous = .lowprio
+                     "operator"
+                  when stream.match{re.op}
+                       \ or stream.match{re.op3}
+                       \ or stream.match{re.op4} ->
+                     state.previous = .op
+                     "operator"
+                  when stream.match{re.op2_open} ->
+                     state.previous = .lowprio
+                     state.nest.push with
+                        if stream.eol{}:
+                           then: {
+                              n
+                              n + config.indentUnit
+                              true
+                           } where n = state.nest[state.nest.length - 1][1]
+                           else: {
+                              n
+                              n + 1
+                              true
+                           } where n = stream.column{}
+                     "punctuation"
+                  when stream.match{re.comma} ->
+                     state.previous = .comma
+                     "punctuation"
+                  when stream.match{re.op2_close} ->
+                     state.previous = .punct
+                     if state.nest.length > 1:
+                        state.nest.pop{}
+                     "punctuation"
+                  else ->
+                     stream.next{}
+                     null
+
+            .string ->
+               stream.match{R"(\\\\\"|[^\"])+"}
+               match stream.eat{R"\""}:
+                  undefined? ->
+                     "string"
+                  else ->
+                     state.mode = .code
+                     state.previous = .id
+                     "string"
+
+         result
+
+      indent{state, line} =
+
+         {outer, inner, first} = state.nest[index] where
+            index = state.nest.length - 1
+
+         add =
+            if [not first] and [state.previous == .lowprio or state.previous == .op]:
+               then: config.indentUnit
+               else: 0
+
+         match line:
+            R'[start, in "]}"]? ->
+               outer + add
+            else ->
+               inner + add
+
+      lineComment = ";;"
+
+      electricChars = "]}"
+
+      ;; indent{state, line} =
+
+      ;;    which = match line:
+      ;;       R'[start, in "]}"]? -> -2
+      ;;       else -> -1
+
+      ;;    match state.nest[state.nest.length + which]:
+      ;;       {}
+
+
