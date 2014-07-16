@@ -657,7 +657,7 @@ make_cards{repl} =
    var cards = {=}
 
    files = {
-      static_read "tutorial.q"
+      ;; static_read "tutorial.q"
       static_read "basic.q"
       static_read "cards.q"
       static_read "examples.q"
@@ -684,7 +684,7 @@ make_cards{repl} =
       mktable2 with
          items{cards}.sort{} each
             {k, v} when not R"^tut[0-9]+"? k ->
-               {clickable{"help " + k, k}, v.description}
+               {clickable{"help \"" + k + "\"", k}, v.description}
 
    {cards, Q}
 
@@ -711,11 +711,11 @@ setup{} =
          window, _current, _next, _help
          quaint
 
-      var _current = 0
+      var _current = -1
 
       _next{} =
-         _current += 1
-         _cards.tutorial[_current]
+         _current = [_current + 1] mod _cards.tutorial.length
+         _cards.tutorial[_current] or \"There is no tutorial yet.\"
 
       _help{match} =
          \"\" -> _cards.topics
@@ -734,7 +734,7 @@ setup{} =
          '[.card % quaint.engine.run{^arg}]
    "
 
-   repl.process{"_cards.tutorial[0]", false}
+   repl.process{"help main", false}
    ;; jQuery{"#input"}.focus{}
    repl.cm.focus{}
 

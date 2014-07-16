@@ -1,6 +1,5 @@
 
-@import url("http://fonts.googleapis.com/css?family=Oswald:400,700|Open+Sans");
-
+@import url("http://fonts.googleapis.com/css?family=Cousine:400,700|Open+Sans");
 
 html {
     margin: 0px;
@@ -46,7 +45,7 @@ html {
     /* border: 1px solid #888; */
     display: -webkit-flex;
     display: flex;
-    font-family: monospace;
+    font-family: 'Cousine', monospace;
     white-space: pre-wrap;
 }
 
@@ -330,7 +329,7 @@ html {
     margin: 2px;
     display: inline-block;
     cursor: pointer;
-    font-family: monospace;
+    font-family: 'Cousine', monospace;
     white-space: pre;
     font-weight: bold;
     color: #88f;
@@ -341,7 +340,7 @@ html {
     margin: 2px;
     display: inline-block;
     cursor: pointer;
-    font-family: monospace;
+    font-family: 'Cousine', monospace;
     white-space: pre;
     background-color: #f8f8ff;
 }
@@ -446,3 +445,8 @@ html {
 }
 
 .pattern_table td:first-child {width: 150px;}
+
+
+.CodeMirror pre {
+    font-family: 'Cousine', monospace
+}

@@ -1,15 +1,34 @@
 
 
+main --> Greetings! -->
+
+  === The Earl Grey programming language
+
+  Earl Grey is a new language that compiles to JavaScript. Why should
+  you care? Good question!
+
+  * Advanced [pattern matching]/[help patterns]
+  * Arbitrary new features can be defined with macros/[help macros]
+
+  ==== What to do from here
+
+  * Peruse help/help as a quick start
+  * Consult the index/[help index] for a list of all help topics
+  * Look at examples/[help examples]
+  * ... or simply type or click /next to start the __tutorial!
+
+
+
 topics --> Help starting point -->
 
-   === Help
+  === Help
 
-   ==== Basic topics
+  ==== Basic topics
 
-   /? numbers / strings / variables
+  /? numbers / strings / variables
 
 
-   The /?index contains a list of all help topics.
+  The /?index contains a list of all help topics.
 
 
 
@@ -25,6 +44,140 @@ interface --> REPL interface (keyboard bindings etc.) -->
   `Enter will evaluate the current expression if the cursor is on the
   last line of input and the current indent level is zero or the
   previous line is blank.
+
+
+brackets --> The semantics of brackets -->
+
+  === The semantics of brackets in Earl Grey
+
+  Brackets in EG are certainly "odd", in the sense that they don't
+  follow conventional semantics: blocks are defined using indent or
+  `[[]] (instead of the conventional `{}), grouping expressions is
+  done with `[[]] (instead of the conventional `()), function calls
+  are done as `f{} (instead of the conventional `f()).
+
+  First, let me say that it _is really strange at first, but you do
+  get used to it (or at least I did).
+
+  Second, this scheme is not accidental. There a _logic behind it
+  which I will explain here. Basically, there are two types of
+  brackets:
+
+  # __[Data brackets] define data structures: arrays, objects, lists
+    of arguments, and so on. EG uses `{} as data brackets.
+
+  # __[Grouping brackets] disambiguate priority when necessary and can
+    group several expressions into "blocks". EG uses `[[]] as grouping
+    brackets.
+
+  These simple and consistent semantics cut down the complexity of
+  abstract syntax because they are not context sensitive. For
+  instance, /[parseInt{"101", 2}] can also be written as
+  /[args = {"101", 2}, parseInt args]. This kind of referential
+  transparency is uncommon in mainstream programming languages.
+
+  .note ..
+
+    Since `[[]] is only for grouping, /[parseInt args] is the same
+    thing as /[parseInt[args]]. Indeed, in EG, function application is
+    a special case of indexing where the index is an array.
+
+  Unfortunately, the way parentheses are used in conventional
+  languages is incompatible with this scheme. The least confusing way
+  to go about this issue is to not use parentheses at all, because it
+  is easier to avoid using them wrong when it is always wrong to use
+  them. Square brackets are a natural choice for grouping because it
+  preserves conventional indexing syntax.
+
+  ==== Recovering the standard semantics for parentheses
+
+  Parentheses are currently illegal tokens, but that needs not be the
+  case forever. By mapping `f(expr) to `f{expr} and `(expr) to
+  `[[expr]], conventional syntax can be supported as syntactic sugar.
+
+  The reason why I did not do it is that I am not sure that sugar is
+  foolproof and I want to test the "pure" version of the language
+  first. I invite everyone to give EG's bracket scheme a fair
+  shot. The consistency is pretty neat, especially if you write
+  macros.
+
+  Alternatively, the sugar could be implemented in the text editors
+  themselves, translating parentheses as they are typed. I will
+  definitely consider the feedback I get on this matter.
+
+
+
+syntax --> Syntax overview -->
+
+  === Syntax overview
+
+  Superficially, Earl Grey looks a lot like Python, if function calls
+  used curly braces instead of parentheses.
+
+  This is arguably the most salient difference between EG and almost
+  all other language in use today: the only brackets you will find are
+  curly and square. Parentheses are illegal tokens (for the moment: I
+  keep my options open). The explanation is here/?brackets.
+
+  _syntax_longif1 <-
+    /
+      if 1 + 1 == 2:
+         then: true
+         else: false
+
+  _syntax_longif2 <-
+    /
+      if 1 + 1 == 2:
+         x = 5
+         x + x
+
+  _syntax_longmatch <-
+    /
+      match:
+         when 1 == 0 -> false
+         when 1 == 1 -> true
+         when 1 == 2 -> false
+         else -> false
+
+  _syntax_longwhile <-
+    /
+      i = 10
+      while i > 0:
+         i -= 1
+
+  === Sugar rules
+
+  * __Newlines: every newline is equivalent to a comma unless the next
+    line starts with a backslash.
+
+  * __Indent: every indented block is equivalent to a `[[]] block. See
+    /?blocks.
+
+  * __Colon: `[a: b] is equivalent to `a{b} and `[a b: c] is
+    equivalent to `a{b, c}.
+
+  * /?with
+
+  === Overview
+
+  | /?strings and /?numbers | / "hello world" / .word / 12.34e56 / 16rDEADBEEF
+  | /?arrays           | / {1, 2, 3} / {} / #word{4, 5}
+  | /?objects          | / {a = 1, b = 2} / {"x" => 3} / {=}
+  | __Indexing         | / {1, 2}[0] / {a = 3}["a"]
+  | __Arithmetic       | / [2 * 7 + 3 * -4]
+  | __Grouping         | / [2 * [7 + 3] * -4]
+  | __Blocks           | / [[x = 1, y = 2, x + y]]
+  | __[Function calls] | / parseInt{"ZZZ", 36}
+  | /?variables        | / [xyz = 123] / [var www = 456]
+  | __Definitions      | / double{x} = x + x
+  | __Lambdas          | / double = {x} -> x + x
+  | loops/?each        | / 1..10 each i -> i * i
+  | __Conditionals     | /if{1 + 1 == 2, true, false} (expression form)
+  |                    | {_syntax_longif1}
+  |                    | {_syntax_longif2} (`then is implicit)
+  |                    | {_syntax_longmatch} (use /match if there are many conditions to test)
+  | __[While loops]    | {_syntax_longwhile}
+
 
 
 numbers --> Numeric values -->
@@ -431,6 +584,61 @@ macros --> Macros -->
 
   === Macros
 
-  are super cool
+  __Macros permit the easy development of new language features. In
+  EG, a macro receives a data structure containing an abstract
+  representation the source code of its argument. It can execute
+  arbitrary transformations on that code at compile time in order to
+  generate new code to execute. In that sense EG's macro system is
+  similar to that of Lisp, Scheme, Racket or Clojure. It is also
+  hygienic/?hygiene.
+
+  ==== A simple example
+
+  The `unless macro is the opposite of `if: it executes its body when
+  the condition is _not true. The definition is very straightforward:
+
+  /
+     macro unless{*, '{^test, ^body}}:
+        'if{not ^test, ^body}
+
+  Click on the definition to execute it. Then you can use it like
+  this:
+
+  / unless{0, "yes"}
+
+  Or like this:
+
+  / unless 0: "yes"
+
+  Note that a macro normally takes four arguments, but it is often
+  unnecessary to look at the first three. The `[*] in the arguments
+  list is a nameless rest argument, so it's just a convenient way to
+  discard the first three arguments.
+
+  ==== The basics
+
+  * The single quote (`[']) returns the [quoted form]/?quote of its
+    argument, i.e. its abstract syntax. (Examples: /['x], /['{x, y}],
+    /['[a + b]]).
+
+  * The "quoted form" is really just an array.
+
+  * In a quoted form, the caret (`[^]) "unquotes" its argument,
+    inserting the result of the expression in the form. (Example:
+    /['{1, 2, ^[#value{1 + 2}]}]).
+
+  Use the quote\/unquote operators to extract the relevant parts of
+  the macro's arguments and to construct the return value.
+
+  ==== Further reading
+
+  The subject of macros can be complex.
+
+  * See /?quote to read about the abstract representation of programs.
+
+  * See /?macrointerface for the full interface available to macros.
+
+  * See /?hygiene for how macros interact with scope and how a macro
+    can define variables for users.
 
 

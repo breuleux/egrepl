@@ -105,14 +105,14 @@ examples --> List of examples -->
      var {foo, bar} = {8, 88}
      foo <=> bar
      {foo, bar}
-
+  span.separator ..
   Unless /
      macro unless{*, #data{test, body}}:
         'if{not ^test, ^body}
 
      unless 0:
         "yes"
-
+  span.separator ..
   Anonymous function /
      macro [~]{*, #data{#void{}, body}}:
         ;; We mark the $ variable to be resolved in the same
@@ -120,7 +120,7 @@ examples --> List of examples -->
         ;; variable introduced by a macro in order to make it
         ;; visible)
         dolla = body.env.mark{'$}
-        ' | {^dolla} -> ^body
+        '[{^dolla} -> ^body]
 
      add10 = ~[$ + 10]
      first4 = ~$.substring{0, 4}
