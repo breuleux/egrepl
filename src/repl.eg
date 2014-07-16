@@ -30,57 +30,6 @@ globals:
 gensym = GenSym{"io_"}
 
 
-;; macro [%]{context, scope, {=> env}, #data{descr, contents}}:
-
-;;    tag = .div
-;;    cls = {}
-;;    id = null
-;;    kv = '{=}
-
-;;    parse{match whole} =
-;;       #void{} -> null
-;;       #symbol{s} ->
-;;          tag = s
-;;       #value{x} ->
-;;          cls.push with x
-;;       '[. ^[#symbol{x} or #value{x}]] ->
-;;          cls.push with x
-;;       '[# ^[#symbol{x} or #value{x}]] ->
-;;          id = #value{x}
-;;       '[^_ = ^_] ->
-;;          kv.push with whole
-;;       #send{expr, rest} ->
-;;          parse{expr}, parse{rest}
-;;       #multi{*args} or #data{*args} ->
-;;          args each arg -> parse{arg}
-
-;;    parse{descr}
-
-;;    if id:
-;;       kv.push with '["id" = ^id]
-;;    if cls.length:
-;;       kv.push with '["className" = ^=cls.join{" "}]
-
-;;    contents ?=
-;;       #void{} -> #array{}
-;;       #multi{*args} ->
-;;          xs = {}
-;;          args each
-;;             pair and '[^k = ^v] ->
-;;                kv.push with pair
-;;             splice and '[** ^_] ->
-;;                kv.push with splice
-;;             other ->
-;;                xs.push with other
-;;          #array{*xs}
-;;       pair and '[^k = ^v] ->
-;;          kv.push with pair
-;;          #array{}
-;;       x -> x
-
-;;    '[^env.convert{'create_node}]{^=tag, ^kv, ^contents}
-
-
 create_node{tag, kv, contents} =
    node = document.createElement{tag}
    items{kv} each {k, v} ->
@@ -129,43 +78,6 @@ make_dom{match, default_tag = "div"} =
                node.appendChild{make_dom{c, default_tag}}
 
       node
-
-   ;; Node? {=> classes, => children} ->
-   ;;    var tag = default_tag
-   ;;    _classes = {}
-   ;;    var id = null
-   ;;    kv = {}
-   ;;    sub = {}
-   ;;    classes each
-   ;;       #assoc{k, v} ->
-   ;;          kv.push with {k, v}
-   ;;       #assoc{k} ->
-   ;;          kv.push with {k, undefined}
-   ;;       R'[start, "+", {*any}]! {_, m} ->
-   ;;          tag = m
-   ;;       R'[start, "#", {*any}]! {_, m} ->
-   ;;          id = m
-   ;;       String? s ->
-   ;;          _classes.push with s
-
-   ;;    node = document.createElement{tag}
-   ;;    if id:
-   ;;       node.id = id
-   ;;    if _classes.length:
-   ;;       node.className = _classes.join{" "}
-   ;;    kv each {k, v} ->
-   ;;       node[k] = v
-
-   ;;    match tag:
-   ;;       .raw ->
-   ;;          children each
-   ;;             String? s ->
-   ;;                node.innerHTML = s
-   ;;       other ->
-   ;;          children each c ->
-   ;;             node.appendChild{make_dom{c, default_tag}}
-
-   ;;    node
 
    other ->
       make_dom{String! other}
@@ -252,14 +164,7 @@ class Repl:
       @url = "<repl>"
       @gen = eg.Generator{true}
 
-      ;; @input = input
-      @multiline = false
-
       @setup_cm{@textarea}
-
-      ;; @interactor = kb.Interactor{{=}}
-      @set_multiline{false}
-      ;; @interactor.install{@input}
 
       @cursor = 0
       @history = {""}
@@ -277,21 +182,6 @@ class Repl:
          }
 
       @cm.addKeyMap{{...}} with
-
-         ;; Enter{match cm} =
-         ;;    when @multiline ->
-         ;;       CodeMirror.Pass
-         ;;    else ->
-         ;;       e = cm.lineCount{} - 1
-         ;;       state = cm.getStateAfter{e}
-         ;;       match:
-         ;;          when state.mode !== .code
-         ;;               \ or state.nest.length > 1
-         ;;               \ or R"lowprio|op"? state.previous
-         ;;               \ or [state.nest[0][1] > 0 and not R"^\\s*$"? cm.getLine{e}] ->
-         ;;             CodeMirror.Pass
-         ;;          else ->
-         ;;             @submit{}
 
          Enter{match cm} =
             do:
@@ -330,7 +220,6 @@ class Repl:
             when @cursor > 0 and @cm.getCursor{}.line === 0 ->
                @cm.setValue with @history[-- @cursor]
                @cm.setCursor{@cm.lineCount{}, 0}
-               ;; @set_multiline{@cm.lineCount{} > 1}
                @sink{}
             else ->
                CodeMirror.Pass
@@ -340,15 +229,11 @@ class Repl:
                   \ @cm.getCursor{}.line === [@cm.lineCount{} - 1]] ->
                @cm.setValue with @history[++ @cursor]
                @cm.setCursor{0, @cm.getLine{0}.length}
-               ;; @set_multiline{@cm.lineCount{} > 1}
                @sink{}
             else ->
                CodeMirror.Pass
 
          Tab = "indentAuto"
-
-         ;; "Ctrl-M"{_} =
-         ;;    @set_multiline{not @multiline}
 
          "Ctrl-L"{_} =
             jQuery{@target}.empty{}
@@ -384,85 +269,10 @@ class Repl:
          @history.push{""}
       @cursor = @history.length - 1
 
-   ;; submit{} =
-   ;;    @set_multiline{false}
-   ;;    text = @input.textContent
-   ;;    @process{text}
-   ;;    @input.innerHTML = ""
-   ;;    @sink{}
-
    submit{} =
-      @set_multiline{false}
       text = @cm.getValue{}
       @cm.setValue{""}
       @process{text, true, true}
-
-   set_multiline{match @multiline} =
-      true? ->
-         jQuery{@inputbox}.addClass{.multiline}
-      false? ->
-         jQuery{@inputbox}.removeClass{.multiline}
-
-   ;; begin_multiline{} =
-   ;;    @set_multiline{true}
-   ;;    ;; @input.innerHTML = @input.innerHTML + "\n   "
-   ;;    goto_end{@input}
-   ;;    insert_before_caret{"\n   "}
-   ;;    @sink{}
-
-   ;; set_multiline{x} = match x:
-   ;;    do:
-   ;;       @multiline = x
-   ;;       previous{} =
-   ;;          if [@cursor > 0]:
-   ;;             @input.textContent = @history[-- @cursor]
-   ;;             goto_end{@input}
-   ;;             @sink{}
-   ;;       next{} =
-   ;;          if [@cursor < @history.length - 1]:
-   ;;             @input.textContent = @history[++ @cursor]
-   ;;             goto_end{@input}
-   ;;             @sink{}
-   ;;       common = {
-   ;;          "C-l"{} =
-   ;;             jQuery{@target}.empty{}
-   ;;          "S-Enter"{} =
-   ;;             @submit{}
-   ;;       }
-
-   ;;    === false ->
-   ;;       jQuery{@input}.removeClass{.multiline}
-   ;;       @interactor.set_bindings with common & {
-   ;;          "C-m"{} =
-   ;;             @set_multiline{true}
-   ;;             .break
-   ;;          "C-Enter"{} =
-   ;;             @begin_multiline{}
-   ;;             .break
-   ;;          Enter{} =
-   ;;             match @input.textContent:
-   ;;                R"(=|->|%|:|with|where|each)$"? ->
-   ;;                   @begin_multiline{}
-   ;;                other ->
-   ;;                   @submit{}
-   ;;          Up = previous
-   ;;          Down = next
-   ;;       }
-
-   ;;    === true ->
-   ;;       jQuery{@input}.addClass{.multiline}
-   ;;       @interactor.set_bindings with common & {
-   ;;          "C-m"{} =
-   ;;             @set_multiline{false}
-   ;;             .break
-   ;;          "C-Enter"{} =
-   ;;             @submit{}
-   ;;          Enter{} =
-   ;;             insert_before_caret{"\n"}
-   ;;             @sink{}
-   ;;          Tab{} =
-   ;;             insert_before_caret{"   "}
-   ;;       }
 
    generate{text} =
       @gen.generate{eg.Source{text, @url}}
