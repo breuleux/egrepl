@@ -176,7 +176,7 @@ class Repl:
       ^["." + cls] %
          label
          onclick{e} =
-            @focus_page{tab, pos}
+            @render_tab{tab, pos}
 
    gettab{match tab} =
       do:
@@ -221,9 +221,9 @@ class Repl:
          pos = current + 1 ;;pages.length
       pages.splice{pos}
       pages.push with {label, page}
-      @focus_page{tab, pos}
+      @render_tab{tab, pos}
 
-   focus_page{tab, pos} =
+   render_tab{tab, pos} =
       {pages, ltarget, ptarget, _} = @tabs[tab]
       @tabs[tab][3] = pos
       mkh{pos, label, cls} = @make_history_label{tab, pos, label, cls}
@@ -239,6 +239,8 @@ class Repl:
       {_, page} = pages[pos]
       ptarget.replaceChild{..., ptarget.children[0]} with make_dom with page
 
+   focus_tab{tab} =
+      @target2.children[tab].scrollIntoView{true}
 
    setup_cm{textarea} =
 
@@ -473,18 +475,124 @@ macro acquire_cards{*, #data{*filenames}}:
 
    results
 
+
+__clickable{repl, code, text = null} =
+   .clickable %
+      onclick{e and {shiftKey => match}} =
+         do: e.preventDefault{}
+         true? ->
+            repl.cm.setValue{code}
+            repl.cm.focus{}
+         else ->
+            repl.process{code, true, true}
+            repl.cm.focus{}
+      text or repl.highlight{code}
+
+__insert_doc{repl, tab, topic, text = null} =
+   .help %
+      onclick{e} =
+         e.preventDefault{}
+         match e.which:
+            1 ->
+               __cards[topic][1]{repl, tab}
+               repl.focus_tab{tab}
+            2 ->
+               __cards[topic][1]{repl, repl.tabs.length}
+      text or topic
+
+
+card_displayer{topic, description, text}{repl, tab} =
+
+   clickable{code, text = null} =
+      __clickable{repl, code, text}
+
+   insert_doc{topic, text = null} =
+      __insert_doc{repl, tab, topic, text}
+
+   make_row{items} =
+      span %
+         items each
+            first item ->
+               item
+            item ->
+               span % [span.separator % "", item]
+
+   getcode{node} =
+      code = shed{node}.location.text{}
+      lines = code.split{"\n"}
+      while [R"^ *$"? lines[0]]:
+         lines.shift{}
+      while [R"^ *$"? lines[lines.length - 1]]:
+         lines.pop{}
+      R"( *)(.*)"! {_, indent, line0} = lines[0]
+      nindent = indent.length
+      xs.join{"\n"} where
+         xs = {line0} ++
+            lines.slice{1} each line ->
+               line.slice{nindent}
+
+   shed{node} =
+      chain node:
+         quaint.shed{@}
+
+
+   dispatch = quaint.dispatch.clone{}
+   components = {...} with
+
+      "maybe label / code"{engine, node, {label => match, => code}} =
+         #text{""} ->
+            match quaint.collapse{"/", code}:
+               {x} -> clickable{getcode{x}}
+               {*xs} -> make_row with
+                  xs each x -> clickable{getcode{x}, null}
+         label ->
+            clickable with
+               getcode{code}
+               shed{label}.location.text{}
+
+      "maybe label /? topic"{engine, node, {label => match, => topic}} =
+         #text{""} ->
+            match quaint.collapse{"/", topic}:
+               {x} -> insert_doc{shed{x}.location.text{}}
+               {*xs} -> make_row with
+                  xs each x -> insert_doc{shed{x}.location.text{}}
+         label ->
+            insert_doc with
+               shed{topic}.location.text{}
+               shed{label}.location.text{}
+
+   items{components} each {spec, fn} ->
+      dispatch.register with quaint.Spec{spec, fn}
+
+   Q = quaint.Engine{dispatch}
+
+   repl.insert_page{tab, -1, topic, .card % Q.run{text}}
+   undefined
+
+
 __cards =
    raw = acquire_cards with
       "basic.q"
       "cards.q"
       "examples.q"
       "advanced.q"
+   Q = quaint.Engine{quaint.dispatch}
    rval = object with raw each {topic, description, text} ->
-      {topic, {description, text}}
+      qdesc = Q.run{description}
+      {topic, {qdesc, card_displayer{topic, description, text}}}
 
-display_card{repl, tab, code} =
-   pass
+   rval.index = {"Index"} with {repl, tab} ->
+      repl.insert_page{tab, -1, .index} with
+         .card % .blocks %
+            h3 % .Index
+            table %
+               items{rval}.sort{} each {topic, {desc, f}} ->
+                  tr %
+                     td % __insert_doc{repl, tab, topic}
+                     td % desc
 
+
+   rval
 
 
 
@@ -642,42 +750,49 @@ setup{} =
       eval
       document.getElementById{"help"}
 
-   {window._cards, engine} = make_cards{repl}
-   ;; {window._cards, engine} = {{=}, null}
+   ;; {window._cards, engine} = make_cards{repl}
+
+   engine = null
+
    window.quaint = quaint & {engine = engine}
+   window.__cards = __cards
+   window.__repl = repl
 
    repl.eval with "
 
       globals:
-         _cards, alert, document
+         _cards, __cards, alert, document
          window, _current, _next, _help
-         quaint, repl
+         quaint, repl, __repl
 
       var _current = -1
 
       _next{} =
-         _current = [_current + 1] mod _cards.tutorial.length
-         _cards.tutorial[_current] or \"There is no tutorial yet.\"
+         \"There is no tutorial yet.\"
 
-      _help{match} =
-         \"\" -> _cards.topics
-         topic -> _cards[topic] or [\"Invalid help topic: \\\"\" + topic + \"\\\"\"]
+      _help{match topic} =
+         when __cards[topic] ->
+            __cards[topic][1]{__repl, 0}
+         else ->
+            \"Invalid help topic: \\\"\" + topic + \"\\\"\"
 
       macro next{_, _, form, _}:
          '[^form.env.mark{'_next}]{}
 
       macro help{_, _, form, match}:
          do: h = form.env.mark{'_help}
-         #symbol{topic} or #value{topic} ->
-            '[^h]{^=topic}
-         #void{} -> '[^h]{\"\"}
+         #void{} -> '[^h]{\"help\"}
+         topic -> '[^h]{^topic}
 
       macro Q{_, _, _, arg}:
          '[.card % quaint.engine.run{^arg}]
    "
 
-   repl.process{"help main", false}
+   ;; repl.process{"help main", false}
    ;; jQuery{"#input"}.focus{}
+
+   repl.process{"__cards.main[1]{__repl, 0}", false}
+
    repl.cm.focus{}
 
    repl

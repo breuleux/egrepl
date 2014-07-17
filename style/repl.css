@@ -455,7 +455,12 @@ html {
 }
 
 
+/* #help { */
+/*     position: relative; */
+/* } */
+
 .tab {
+    /* position: relative; */
     padding-left: 10px;
     padding-right: 10px;
 }
@@ -484,6 +489,7 @@ html {
     display: inline-block;
     padding: 4px;
     /* background-color: #eee; */
+    cursor: pointer;
 }
 
 .current_page {

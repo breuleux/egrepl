@@ -7,19 +7,19 @@ main --> Greetings! -->
   Earl Grey is a new language that compiles to JavaScript. Why should
   you care? Good question!
 
-  * Advanced [pattern matching]/[help patterns]
-  * Arbitrary new features can be defined with macros/[help macros]
+  * Advanced [pattern matching]/?patterns
+  * Arbitrary new features can be defined with /?macros
 
   ==== What to do from here
 
-  * Peruse help/help as a quick start
-  * Consult the index/[help index] for a list of all help topics
-  * Look at examples/[help examples]
+  * Peruse /?help as a quick start
+  * Consult the /?index for a list of all help topics
+  * Look at /?examples
   * ... or simply type or click /next to start the __tutorial!
 
 
 
-topics --> Help starting point -->
+help --> Help starting point -->
 
   === Help
 
