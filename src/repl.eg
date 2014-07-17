@@ -20,32 +20,35 @@ require:
 provide:
    Repl, kb.Interactor as Interactor
    parse, tokenize, eg.Source as Source
-   make_cards
    setup
 
 globals:
    document, window, alert, jQuery, setTimeout
+   Element
    ;; CodeMirror
 
 gensym = GenSym{"io_"}
 
 
-create_node{tag, kv, contents} =
-   node = document.createElement{tag}
-   items{kv} each {k, v} ->
-      node[k] = v
-   [Array! contents] each
-      String? s ->
-         node.appendChild{document.createTextNode{s}}
-      other ->
-         node.appendChild{other}
-   node
+;; create_node{tag, kv, contents} =
+;;    node = document.createElement{tag}
+;;    items{kv} each {k, v} ->
+;;       node[k] = v
+;;    [Array! contents] each
+;;       String? s ->
+;;          node.appendChild{document.createTextNode{s}}
+;;       other ->
+;;          node.appendChild{other}
+;;    node
 
 
 make_dom{match, default_tag = "div"} =
 
    String? s ->
       document.createTextNode{s}
+
+   Element? e ->
+      e
 
    Array? args ->
       node = document.createElement{"span"}
@@ -62,16 +65,24 @@ make_dom{match, default_tag = "div"} =
          other ->
             tag = other
 
-      node = document.createElement{tag}
+      node = match tag:
+         .svg ->
+            jQuery{"<svg width=0 height=0></svg>"}[0]
+         else ->
+            document.createElement{tag}
       if classes.length:
          node.className = classes.join{" "}
-      items{props} each {k, v} ->
-         node[k] = v
+      items{props} each {match k, v} ->
+         R"^on"? ->
+            node[k] = v
+         else ->
+            node.setAttribute{k, v}
 
       match tag:
          .raw ->
-            children each
-               String? s ->
+            tag = .span
+            match children:
+               {String? s} ->
                   node.innerHTML = s
          other ->
             children each c ->
@@ -366,7 +377,8 @@ class Repl:
          hl
 
    process{text, display_in = true, var sink = false} =
-      @add_to_history{text}
+      if display_in:
+         @add_to_history{text}
       real_text = text ;; "\n" + text + "\n"
       var target = 1
       sink and= 1
@@ -492,12 +504,16 @@ __insert_doc{repl, tab, topic, text = null} =
    .help %
       onclick{e} =
          e.preventDefault{}
+         data = __cards[topic]
          match e.which:
+            when not data ->
+               card_displayer{"error", "Error", ...}{repl, tab} with
+                  "__ERROR: There is no documentation for `\"" + topic + "\""
             1 ->
-               __cards[topic][1]{repl, tab}
+               data[1]{repl, tab}
                repl.focus_tab{tab}
             2 ->
-               __cards[topic][1]{repl, repl.tabs.length}
+               data[1]{repl, repl.tabs.length}
       text or topic
 
 
@@ -548,7 +564,7 @@ card_displayer{topic, description, text}{repl, tab} =
          label ->
             clickable with
                getcode{code}
-               shed{label}.location.text{}
+               engine.run{label}
 
       "maybe label /? topic"{engine, node, {label => match, => topic}} =
          #text{""} ->
@@ -584,13 +600,13 @@ __cards =
    rval.index = {"Index"} with {repl, tab} ->
       repl.insert_page{tab, -1, .index} with
          .card % .blocks %
-            h3 % .Index
+            h2 % .Index
             table %
                items{rval}.sort{} each {topic, {desc, f}} ->
                   tr %
                      td % __insert_doc{repl, tab, topic}
                      td % desc
-
+      undefined
 
    rval
 
@@ -598,145 +614,145 @@ __cards =
 
 
 
-macro static_read{*, #value{filename}}:
-   require: fs
-   globals: __dirname
-   f = __dirname + "/" + filename
-   contents = fs.readFileSync{f, .utf8}
-   #value{contents}
+;; macro static_read{*, #value{filename}}:
+;;    require: fs
+;;    globals: __dirname
+;;    f = __dirname + "/" + filename
+;;    contents = fs.readFileSync{f, .utf8}
+;;    #value{contents}
 
 
-make_cards{repl} =
+;; make_cards{repl} =
 
-   mktable2{x, recur = repr} =
-      its = match x:
-         Array? -> x
-         other -> items{x}
-      table %
-         its each {k, v} ->
-            tr %
-               th % recur{k, repr}
-               td % recur{v, repr}
+;;    mktable2{x, recur = repr} =
+;;       its = match x:
+;;          Array? -> x
+;;          other -> items{x}
+;;       table %
+;;          its each {k, v} ->
+;;             tr %
+;;                th % recur{k, repr}
+;;                td % recur{v, repr}
 
-   clickable{code, text = null} =
-      click{e} =
-         e.preventDefault{}
-         repl.process{code, true, true}
-         ;; repl.sink{}
-         ;; jQuery{repl.input}.focus{}
-         repl.cm.focus{}
-      cls = match code:
-         R"^help"? -> ".help"
-         else -> ".clickable"
-      ^cls %
-         onclick = click
-         text or repl.highlight{code}
+;;    clickable{code, text = null} =
+;;       click{e} =
+;;          e.preventDefault{}
+;;          repl.process{code, true, true}
+;;          ;; repl.sink{}
+;;          ;; jQuery{repl.input}.focus{}
+;;          repl.cm.focus{}
+;;       cls = match code:
+;;          R"^help"? -> ".help"
+;;          else -> ".clickable"
+;;       ^cls %
+;;          onclick = click
+;;          text or repl.highlight{code}
 
-   clickable_row{items} =
-      span %
-         items each
-            first item ->
-               clickable{*item}
-            item ->
-               span % [span.separator % "", clickable{*item}]
+;;    clickable_row{items} =
+;;       span %
+;;          items each
+;;             first item ->
+;;                clickable{*item}
+;;             item ->
+;;                span % [span.separator % "", clickable{*item}]
 
-   getcode{node} =
-      code = shed{node}.location.text{}
-      lines = code.split{"\n"}
-      while [R"^ *$"? lines[0]]:
-         lines.shift{}
-      while [R"^ *$"? lines[lines.length - 1]]:
-         lines.pop{}
-      R"( *)(.*)"! {_, indent, line0} = lines[0]
-      nindent = indent.length
-      xs.join{"\n"} where
-         xs = {line0} ++
-            lines.slice{1} each line ->
-               line.slice{nindent}
+;;    getcode{node} =
+;;       code = shed{node}.location.text{}
+;;       lines = code.split{"\n"}
+;;       while [R"^ *$"? lines[0]]:
+;;          lines.shift{}
+;;       while [R"^ *$"? lines[lines.length - 1]]:
+;;          lines.pop{}
+;;       R"( *)(.*)"! {_, indent, line0} = lines[0]
+;;       nindent = indent.length
+;;       xs.join{"\n"} where
+;;          xs = {line0} ++
+;;             lines.slice{1} each line ->
+;;                line.slice{nindent}
 
-   shed{node} =
-      chain node:
-         quaint.shed{@}
-         ;; quaint.shed_indent{@}
+;;    shed{node} =
+;;       chain node:
+;;          quaint.shed{@}
+;;          ;; quaint.shed_indent{@}
 
-   dispatch = quaint.dispatch.clone{}
-   components = {...} with
+;;    dispatch = quaint.dispatch.clone{}
+;;    components = {...} with
 
-      "maybe label / code"{engine, node, {label => match, => code}} =
-         #text{""} ->
-            match quaint.collapse{"/", code}:
-               {x} -> clickable{getcode{x}}
-               {*xs} -> clickable_row{xs2} where
-                  xs2 = xs each x -> {z, null} where z = getcode{x}
-         label ->
-            clickable with
-               getcode{code}
-               shed{label}.location.text{}
+;;       "maybe label / code"{engine, node, {label => match, => code}} =
+;;          #text{""} ->
+;;             match quaint.collapse{"/", code}:
+;;                {x} -> clickable{getcode{x}}
+;;                {*xs} -> clickable_row{xs2} where
+;;                   xs2 = xs each x -> {z, null} where z = getcode{x}
+;;          label ->
+;;             clickable with
+;;                getcode{code}
+;;                shed{label}.location.text{}
 
-      "maybe label /? topic"{engine, node, {label => match, => topic}} =
-         do:
-            helpify{x} =
-               "help \"" + x + "\""
-         #text{""} ->
-            match quaint.collapse{"/", topic}:
-               {x} -> clickable{helpify{code}, code} where code = getcode{x}
-               {*xs} -> clickable_row{xs2} where
-                  xs2 = xs each x ->
-                     {helpify{code}, code} where code = getcode{x}
-         label ->
-            clickable with
-               helpify{getcode{topic}}
-               shed{label}.location.text{}
+;;       "maybe label /? topic"{engine, node, {label => match, => topic}} =
+;;          do:
+;;             helpify{x} =
+;;                "help \"" + x + "\""
+;;          #text{""} ->
+;;             match quaint.collapse{"/", topic}:
+;;                {x} -> clickable{helpify{code}, code} where code = getcode{x}
+;;                {*xs} -> clickable_row{xs2} where
+;;                   xs2 = xs each x ->
+;;                      {helpify{code}, code} where code = getcode{x}
+;;          label ->
+;;             clickable with
+;;                helpify{getcode{topic}}
+;;                shed{label}.location.text{}
 
-      "topic --> contents"{engine, node, {=> topic, => contents}} =
-         cards[topic.location.text{}] =
-            .card % engine.run{contents}
+;;       "topic --> contents"{engine, node, {=> topic, => contents}} =
+;;          cards[topic.location.text{}] =
+;;             .card % engine.run{contents}
 
-      "topic --> desc --> contents"{engine, node, {=> topic, => desc, => contents}} =
-         topic_text = topic.location.text{}
-         cards[topic_text] =
-            [.card % engine.run{contents}] &:
-               {description = engine.run{desc}
-                title = topic_text}
+;;       "topic --> desc --> contents"{engine, node, {=> topic, => desc, => contents}} =
+;;          topic_text = topic.location.text{}
+;;          cards[topic_text] =
+;;             [.card % engine.run{contents}] &:
+;;                {description = engine.run{desc}
+;;                 title = topic_text}
 
-   items{components} each {spec, fn} ->
-      dispatch.register with quaint.Spec{spec, fn}
+;;    items{components} each {spec, fn} ->
+;;       dispatch.register with quaint.Spec{spec, fn}
 
-   var cards = {=}
+;;    var cards = {=}
 
-   files = {
-      ;; static_read "tutorial.q"
-      static_read "basic.q"
-      static_read "cards.q"
-      static_read "examples.q"
-      static_read "advanced.q"
-   }
+;;    files = {
+;;       ;; static_read "tutorial.q"
+;;       static_read "basic.q"
+;;       static_read "cards.q"
+;;       static_read "examples.q"
+;;       static_read "advanced.q"
+;;    }
 
-   Q = quaint.Engine{dispatch}
+;;    Q = quaint.Engine{dispatch}
 
-   files each file ->
-      Q.run{file}
+;;    files each file ->
+;;       Q.run{file}
 
-   tutorial = {}
-   var i = 0
-   while cards["tut" + String{i}]:
-      tutorial.push with
-         cards["tut" + String{i}]
-      i += 1
+;;    tutorial = {}
+;;    var i = 0
+;;    while cards["tut" + String{i}]:
+;;       tutorial.push with
+;;          cards["tut" + String{i}]
+;;       i += 1
 
-   tutorial.description = "Earl Grey tutorial"
-   cards.tutorial = tutorial
+;;    tutorial.description = "Earl Grey tutorial"
+;;    cards.tutorial = tutorial
 
-   cards.index = .card % .blocks %
-      h3 % "Index"
-      mktable2 with
-         items{cards}.sort{} each
-            {k, v} when not R"^tut[0-9]+"? k ->
-               {clickable{"help \"" + k + "\"", k}, v.description}
-   cards.index.description = "Help index"
-   cards.index.title = "index"
+;;    cards.index = .card % .blocks %
+;;       h2 % "Index"
+;;       mktable2 with
+;;          items{cards}.sort{} each
+;;             {k, v} when not R"^tut[0-9]+"? k ->
+;;                {clickable{"help \"" + k + "\"", k}, v.description}
+;;    cards.index.description = "Help index"
+;;    cards.index.title = "index"
 
-   {cards, Q}
+;;    {cards, Q}
 
 
 
@@ -752,11 +768,12 @@ setup{} =
 
    ;; {window._cards, engine} = make_cards{repl}
 
-   engine = null
+   engine = quaint.Engine{quaint.dispatch}
 
    window.quaint = quaint & {engine = engine}
    window.__cards = __cards
    window.__repl = repl
+   window.make_dom = make_dom
 
    repl.eval with "
 
@@ -764,6 +781,7 @@ setup{} =
          _cards, __cards, alert, document
          window, _current, _next, _help
          quaint, repl, __repl
+         make_dom
 
       var _current = -1
 
@@ -791,7 +809,9 @@ setup{} =
    ;; repl.process{"help main", false}
    ;; jQuery{"#input"}.focus{}
 
-   repl.process{"__cards.main[1]{__repl, 0}", false}
+   ;; repl.process{"__cards.help[1]{__repl, 0}", false}
+
+   repl.process{"help", false}
 
    repl.cm.focus{}
 
