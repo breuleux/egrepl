@@ -156,18 +156,88 @@ insert_before_caret{text} =
 Error.prototype["::repr"] = {} ->
    format_error{this}
 
+dom_node_clear{x} =
+   while x.children.length > 0:
+      x.removeChild{x.children[0]}
+
 
 class Repl:
 
-   constructor{@box, @target, @inputbox, @textarea, @evaluator, @target2} =
 
+   constructor{@box, @target, @inputbox, @textarea, @evaluator, @target2} =
       @url = "<repl>"
       @gen = eg.Generator{true}
-
       @setup_cm{@textarea}
-
       @cursor = 0
       @history = {""}
+      @tabs = {}
+
+   make_history_label{tab, pos, label, cls} =
+      ^["." + cls] %
+         label
+         onclick{e} =
+            @focus_page{tab, pos}
+
+   gettab{match tab} =
+      do:
+         create{} =
+            pages = {}
+            box = make_dom with
+               div.tab %
+                  div.tab_header %
+                     div.breadcrumbs %
+                     div.close_tab %
+                        onclick{e} =
+                           @tabs[tab] = null
+                           dom_node_clear with
+                              @target2.children[tab]
+                  div % [div %]
+            data = {pages, box.children[0].children[0], box.children[1], -1}
+            {box, data}
+
+      when @tabs[tab] ->
+         @tabs[tab]
+
+      when @tabs[tab] === null ->
+         {box, data} = create{}
+         @tabs[tab] = data
+         @target2.replaceChild with
+            box
+            @target2.children[tab]
+         data
+
+      when tab == @tabs.length ->
+         {box, data} = create{}
+         @tabs.push with data
+         @target2.appendChild with box
+         data
+
+      else ->
+         throw E.repl.no_such_tab{tab}
+
+   insert_page{tab, var pos, label, page} =
+      {pages, ltarget, ptarget, current} = @gettab{tab}
+      if pos == -1:
+         pos = current + 1 ;;pages.length
+      pages.splice{pos}
+      pages.push with {label, page}
+      @focus_page{tab, pos}
+
+   focus_page{tab, pos} =
+      {pages, ltarget, ptarget, _} = @tabs[tab]
+      @tabs[tab][3] = pos
+      mkh{pos, label, cls} = @make_history_label{tab, pos, label, cls}
+      dom_node_clear{ltarget}
+      enumerate{pages} each {i, {name, page}} ->
+         ltarget.appendChild with make_dom with
+            match i:
+               < pos  -> mkh{i, name, .previous_page}
+               == pos -> mkh{i, name, .current_page}
+               > pos  -> mkh{i, name, .next_page}
+         if i < pages.length - 1:
+            ltarget.appendChild with make_dom with span.history_separator %
+      {_, page} = pages[pos]
+      ptarget.replaceChild{..., ptarget.children[0]} with make_dom with page
 
 
    setup_cm{textarea} =
@@ -247,12 +317,10 @@ class Repl:
       @cm.setSize{.auto, .auto}
 
    sink{} =
-      console.log with "NOOO"
       setTimeout{..., 0} with {} ->
          jQuery{@box}.scrollTop{@box.scrollHeight}
 
    sink2{} =
-      console.log with "HERE"
       setTimeout{..., 0} with {} ->
          match.indexable @target2.childNodes:
             {*, ch} ->
@@ -298,7 +366,7 @@ class Repl:
    process{text, display_in = true, var sink = false} =
       @add_to_history{text}
       real_text = text ;; "\n" + text + "\n"
-      var target = @target
+      var target = 1
       sink and= 1
       node1 = make_dom with
          if display_in:
@@ -308,7 +376,7 @@ class Repl:
                   .entry % @highlight{text}
             else:
                ""
-      node2 = make_dom with
+      node2 =
          match @eval{real_text}:
             when text.trim{} === "" ->
                ""
@@ -316,12 +384,11 @@ class Repl:
                ""
             #success{Node? n} ->
                if [.card %]? n:
-                  target = @target2
+                  target = 2
                   sink and= 2
-               .display %
-                  n
-                  ;; .displaybanner %
-                  ;; .result % n
+               n
+               ;; .displaybanner %
+               ;; .result % n
             #success{value} ->
                .out %
                   .outbanner %
@@ -332,14 +399,19 @@ class Repl:
                   .result % .eg % repr{error}
 
       name = gensym{}
-      node2.id = name
+      ;; node2.props.id = name
 
       @target.appendChild{node1}
-      target.appendChild{node2}
+
+      match target:
+         1 -> @target.appendChild{make_dom with node2}
+         2 -> @insert_page{0, -1, node2.title or "untitled", node2}
+
+      ;; target.appendChild{node2}
 
       match sink:
          1 -> @sink{}
-         2 -> @sink2{}
+         ;; 2 -> @sink2{}
          else -> pass
 
       collapse{e} =
@@ -360,6 +432,62 @@ class Repl:
 
       on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
       on{".traceback"}.addClass{.collapsed}.click{collapse}
+
+
+
+macro acquire_cards{*, #data{*filenames}}:
+
+   globals: __dirname
+
+   dirname = __dirname
+   require: [fs, quaint]
+
+   results = #data{}
+   dispatch = quaint.dispatch.clone{}
+   components = {...} with
+
+      "topic --> contents"{engine, node, {=> topic, => contents}} =
+         results.push with #data with
+            #value{topic.location.text{}}
+            #value{""}
+            #value{contents.location.text{}}
+
+      "topic --> desc --> contents"{engine, node, {=> topic, => desc, => contents}} =
+         results.push with #data with
+            #value{topic.location.text{}}
+            #value{desc.location.text{}}
+            #value{contents.location.text{}}
+
+   items{components} each {spec, fn} ->
+      dispatch.register with quaint.Spec{spec, fn}
+
+   Q = quaint.Engine{dispatch}
+
+   filenames each #value{filename} ->
+      f = dirname + "/" + filename
+      contents = fs.readFileSync{f, .utf8}
+      Q.run{contents}
+
+   ;; quaint mucks this up for some reason
+   set __dirname = dirname
+
+   results
+
+__cards =
+   raw = acquire_cards with
+      "basic.q"
+      "cards.q"
+      "examples.q"
+      "advanced.q"
+   rval = object with raw each {topic, description, text} ->
+      {topic, {description, text}}
+
+display_card{repl, tab, code} =
+   pass
+
+
+
+
 
 
 macro static_read{*, #value{filename}}:
@@ -457,9 +585,11 @@ make_cards{repl} =
             .card % engine.run{contents}
 
       "topic --> desc --> contents"{engine, node, {=> topic, => desc, => contents}} =
-         cards[topic.location.text{}] =
+         topic_text = topic.location.text{}
+         cards[topic_text] =
             [.card % engine.run{contents}] &:
-               {description = engine.run{desc}}
+               {description = engine.run{desc}
+                title = topic_text}
 
    items{components} each {spec, fn} ->
       dispatch.register with quaint.Spec{spec, fn}
@@ -489,12 +619,14 @@ make_cards{repl} =
    tutorial.description = "Earl Grey tutorial"
    cards.tutorial = tutorial
 
-   cards.index = .card %
+   cards.index = .card % .blocks %
       h3 % "Index"
       mktable2 with
          items{cards}.sort{} each
             {k, v} when not R"^tut[0-9]+"? k ->
                {clickable{"help \"" + k + "\"", k}, v.description}
+   cards.index.description = "Help index"
+   cards.index.title = "index"
 
    {cards, Q}
 
@@ -519,7 +651,7 @@ setup{} =
       globals:
          _cards, alert, document
          window, _current, _next, _help
-         quaint
+         quaint, repl
 
       var _current = -1
 

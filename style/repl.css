@@ -271,7 +271,7 @@ html {
 .card {
     font-family: 'Open Sans', 'Trebuchet MS', Trebuchet, 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     font-size: 12pt;
-    padding: 10px;
+    /* padding: 10px; */
     /* border: 2px solid #ddf; */
     /* border-radius: 10px; */
     /* background-color: #f8f8f8; */
@@ -353,8 +353,8 @@ html {
 }
 
 .card .blocks > * {
-    margin-top: 8px;
-    margin-bottom: 8px;
+    /* margin-top: 8px; */
+    margin-bottom: 10px;
 }
 
 
@@ -451,5 +451,67 @@ html {
 
 
 .CodeMirror pre {
-    font-family: 'Cousine', monospace
+    font-family: 'Cousine', monospace;
 }
+
+
+.tab {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.tab_header {
+    background-color: #559;
+    /* margin-bottom: 2px; */
+}
+
+.close_tab {
+    padding: 4px;
+}
+
+.close_tab:before {
+    font-family: 'Cousine', monospace;
+    font-size: 12pt;
+    content: "X";
+    font-weight: bold;
+    color: #fff;
+    display: inline-block;
+}
+
+.current_page, .previous_page, .next_page {
+    font-family: 'Cousine', monospace;
+    font-size: 12pt;
+    display: inline-block;
+    padding: 4px;
+    /* background-color: #eee; */
+}
+
+.current_page {
+    color: #fff;
+    font-weight: bold;
+}
+
+.previous_page {
+    color: #aad;
+    font-weight: bold;
+}
+
+.next_page {
+    color: #88a;
+}
+
+
+.history_separator:before {
+    content: ">";
+    font-weight: bold;
+    color: #888;
+    padding: 2px;
+}
+
+.tab_header {
+    display: -webkit-flex;
+    display: flex;
+    justify-content: space-between;
+}
+
+
