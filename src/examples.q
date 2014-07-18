@@ -41,7 +41,7 @@ examples --> List of examples -->
     load "https://maps.googleapis.com/maps/api/js?v=3.exp&callback=mapinit" as google:
        pass
 
-  Simple TODO list (React) /
+  Quaint editor using React /
 
     ;; This macro is sugar to create DOM elements (no need for JSX here!)
     macro [%%]{*, #data{#symbol{tag}, #multi! {*exprs}}}:
@@ -56,44 +56,35 @@ examples --> List of examples -->
     macro react{*, #data{v and #symbol{name}, #multi! {*exprs}}}:
        '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
 
-    $out.style.height = "300px"
+    $out.style.height = "500px"
     load "http://fb.me/react-with-addons-0.11.0.js" as React:
        
-       react TodoList:
-          render{} =
-             ul %%
-                this.props.items each item ->
-                   li %% item
-       
-       react TodoApp:
+       react Quaint:
           getInitialState{} =
-             {items = {}, text = ""}
+             {text = this.props.initial}
           render{} =
              me = this
              div %%
-                h3 %% .TODO
-                form %%
-                   onSubmit{e} =
-                      e.preventDefault{}
+                div %% [b %% .In]
+                textarea %%
+                   style = {height = "200px", width = "90%", padding = "10px"}
+                   onChange{e} =
                       me.setState with {
-                         items = me.state.items ++ {me.state.text}
-                         text = ""
+                         text = me.refs.textarea.getDOMNode{}.value
                       }
-                   input %%
-                      onChange{e} =
-                         me.setState with {text = e.target.value}
-                      value = this.state.text
-                   button %%
-                      "Add #" + String{this.state.items.length + 1}
-                TodoList %%
-                   items = this.state.items
-                button %%
-                   .Clear
-                   onClick{e} =
-                      me.setState with {items = {}}
-       
-       React.renderComponent{TodoApp %%, $out}
+                   ref = .textarea
+                   defaultValue = this.state.text
+                div %% [b %% .Out]
+                div %%
+                   style = {height = "200px", width = "90%"
+                            border = "1px solid black", padding = "10px"
+                            overflow = .auto}
+                   dangerouslySetInnerHTML = {
+                      __html = make_dom{Q this.state.text}.innerHTML
+                   }
 
+       React.renderComponent{Quaint %% [initial = ...], $out} with
+          "Quaint::http://breuleux.net/quaint is a _bit like Markdown, but not really."
 
 
   === Classics

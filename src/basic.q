@@ -32,6 +32,8 @@ help --> Main help -->
   view the index here/?index or by typing /help.index, and a selected
   list of /?topics (/help.topics).
 
+  Or you can look at /?examples~!
+
   === Links
 
   * [Source code]::https://github.com/breuleux/earl-grey

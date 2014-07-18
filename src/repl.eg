@@ -348,7 +348,7 @@ class Repl:
    submit{} =
       text = @cm.getValue{}
       @cm.setValue{""}
-      @process{text, true, true}
+      @process_all{text, true, true}
 
    generate{text} =
       @gen.generate{eg.Source{text, @url}}
@@ -371,6 +371,10 @@ class Repl:
                else: span % text
       ".cm-s-repl" %
          hl
+
+   process_all{text, display_in = true, sink = false} =
+      text.split{"\n===\n"} each part ->
+         @process{part, display_in, sink}
 
    process{text, display_in = true, var sink = false} =
 
@@ -501,7 +505,7 @@ __clickable{repl, code, text = null} =
             repl.cm.setValue{code}
             repl.cm.focus{}
          else ->
-            repl.process{code, true, true}
+            repl.process_all{code, true, true}
             repl.cm.focus{}
       text or repl.highlight{code}
 
