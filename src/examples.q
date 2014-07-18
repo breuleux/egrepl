@@ -7,21 +7,10 @@ examples --> List of examples -->
   to it. If you want to edit the code, you can press `Up to recall it
   from history and `Enter or `[Shift-Enter] to resubmit.
 
-  .note ..
-    The `load macro loads a script asynchronously from an url and
-    declares a global variable in the process. Once it is loaded,
-    though, you can of course reuse the library without needing the
-    `load block. In fact, ideally, you __shouldn't. See below.
-
-  .warning ..
-    If an example uses a `load statement, clicking on it more than
-    once will load the library more than once. This can lead to funky
-    results.
-
   === Libraries
 
   Plotting with `flot /
-    loading "http://www.flotcharts.org/flot/jquery.flot.js" as $
+    load "http://www.flotcharts.org/flot/jquery.flot.js" as $
     ===
     $out.elem.style.height = "500px" ;; making room
     $.plot{$out.elem, {p1, p2, p3}} where
@@ -29,14 +18,6 @@ examples --> List of examples -->
        p2 = 1..100 each i -> {i, Math.sin{i / 10 - 1}}
        p3 = 1..100 each i -> {i, Math.sin{i / 10} + 0.25}
     undefined
-
-  Plotting with `flot (old) /
-    $out.elem.style.height = "500px" ;; making room
-    load "http://www.flotcharts.org/flot/jquery.flot.js" as $:
-       $.plot{$out.elem, {p1, p2, p3}} where
-          p1 = 1..100 each i -> {i, Math.sin{i / 10}}
-          p2 = 1..100 each i -> {i, Math.sin{i / 10 - 1}}
-          p3 = 1..100 each i -> {i, Math.sin{i / 10} + 0.25}
 
   Google maps /
     ;; we need to give google a callback to execute after loading, so
@@ -48,11 +29,11 @@ examples --> List of examples -->
           zoom = 17
           center = new google.maps.LatLng{48.8582, 2.2945}
        }
-    load "https://maps.googleapis.com/maps/api/js?v=3.exp&callback=mapinit" as google:
-       pass
+    load "https://maps.googleapis.com/maps/api/js?v=3.exp&callback=mapinit" as google
 
   Quaint editor using React /
-
+    load "http://fb.me/react-with-addons-0.11.0.js" as React
+    ===
     ;; This macro is sugar to create DOM elements (no need for JSX here!)
     macro [%%]{*, #data{#symbol{tag}, #multi! {*exprs}}}:
        props = #data{#symbol{"="}}
@@ -65,36 +46,45 @@ examples --> List of examples -->
     ;; This macro is sugar for React.createClass
     macro react{*, #data{v and #symbol{name}, #multi! {*exprs}}}:
        '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
-
-    $out.elem.style.height = "500px"
-    load "http://fb.me/react-with-addons-0.11.0.js" as React:
-       
-       react Quaint:
-          getInitialState{} =
-             {text = this.props.initial}
-          render{} =
-             me = this
-             div %%
-                div %% [b %% .In]
-                textarea %%
-                   style = {height = "200px", width = "90%", padding = "10px"}
-                   onChange{e} =
-                      me.setState with {
-                         text = me.refs.textarea.getDOMNode{}.value
-                      }
-                   ref = .textarea
-                   defaultValue = this.state.text
-                div %% [b %% .Out]
-                div %%
-                   style = {height = "200px", width = "90%"
-                            border = "1px solid black", padding = "10px"
-                            overflow = .auto}
-                   dangerouslySetInnerHTML = {
-                      __html = make_dom{Q this.state.text}.innerHTML
+    ===
+    react Quaint:
+       getInitialState{} =
+          {text = this.props.initial}
+       render{} =
+          me = this
+          div %%
+             div %% [b %% .In]
+             textarea %%
+                style = {height = "200px", width = "90%", padding = "10px"}
+                onChange{e} =
+                   me.setState with {
+                      text = me.refs.textarea.getDOMNode{}.value
                    }
+                ref = .textarea
+                defaultValue = this.state.text
+             div %% [b %% .Out]
+             div %%
+                style = {height = "200px", width = "90%"
+                         border = "1px solid black", padding = "10px"
+                         overflow = .auto}
+                dangerouslySetInnerHTML = {
+                   __html = make_dom{Q this.state.text}.innerHTML
+                }
+    ===
+    $out.elem.style.height = "500px"
+    React.renderComponent{Quaint %% [initial = ...], $out.elem} with "
+    __Quaint is the markup language used for the help topics in the left
+    pane. It is a _bit like `Markdown.
 
-       React.renderComponent{Quaint %% [initial = ...], $out.elem} with
-          "Quaint::http://breuleux.net/quaint is a _bit like Markdown, but not really."
+    .note ..
+      * It is still a bit primitive
+      * You can [__ embed expressions]:
+        6 * 6 = {6 * 6}
+
+    + Title    + Comment
+    | My table | I think it looks nice
+    "
+    undefined
 
 
   === Classics

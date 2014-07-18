@@ -851,10 +851,7 @@ setup{} =
          document.head.appendChild{script}
          undefined
 
-      macro load{*, '{^url as ^v, ^body}}:
-         '[splice: [globals: ^v, loader{^url, {} -> ^body}, undefined]]
-
-      macro loading{*, '[^url as ^v]}:
+      macro load{*, '[^url as ^v]}:
          '[
             splice:
                globals: ^v
@@ -863,7 +860,7 @@ setup{} =
                   if $libs[url]:
                      then:
                         $out.log with .note %
-                           \"\\\"\" + url + \"\\\" is already loaded/loading.\"
+                           \"\\\"\" + url + \"\\\" is already loaded.\"
                      else:
                         $libs[url] = true
                         __repl.lock{}

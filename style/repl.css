@@ -18,8 +18,8 @@ html {
     overflow-y: auto;
 }
 
-#box {width: 48%; float: right}
-#help {width: 48%; float: left}
+#box {width: 50%; float: right}
+#help {width: 50%; float: left}
 
 .result {
     /* outline: 0px; */
