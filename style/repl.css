@@ -268,23 +268,28 @@ html {
 }
 
 
-.card {
+/* .card { */
+/*     font-family: 'Open Sans', 'Trebuchet MS', Trebuchet, 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif; */
+/*     font-size: 12pt; */
+/*     /\* padding: 10px; *\/ */
+/*     /\* border: 2px solid #ddf; *\/ */
+/*     /\* border-radius: 10px; *\/ */
+/*     /\* background-color: #f8f8f8; *\/ */
+/*     width: 100%; */
+/* } */
+
+body {
     font-family: 'Open Sans', 'Trebuchet MS', Trebuchet, 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     font-size: 12pt;
-    /* padding: 10px; */
-    /* border: 2px solid #ddf; */
-    /* border-radius: 10px; */
-    /* background-color: #f8f8f8; */
-    width: 100%;
 }
 
-.card table {
+/* .card */ table {
     border-collapse: collapse;
     margin: 5px;
     border: 2px solid black;
 }
 
-.card th, .card td {
+/* .card */ th, /* .card */ td {
     padding-left: 10px;
     padding-right: 10px;
     text-align: left;
@@ -299,15 +304,15 @@ html {
 /*     background-color: #f8f8f8; */
 /* } */
 
-.card code {
+/* .card */ code {
     background-color: #f8f8f8;
 }
 
-.card th code {
+/* .card */ th code {
     background-color: white;
 }
 
-.card h3 {
+/* .card */ h2 {
     margin-top: 0px;
     margin-bottom: 0.5em;
     border-bottom: 2px solid #88f;
@@ -316,19 +321,24 @@ html {
     padding: 10px;
 }
 
-.card h4 {
-    margin-top: 0.5em;
-    margin-bottom: 0px;
+/* .card */ h2 code {
+    background-color: #66a;
 }
 
-.card .separator:before {
+/* .card */ h3 {
+    margin-top: 0.5em;
+    margin-bottom: 0px;
+    border-bottom: 2px solid #88f;
+}
+
+/* .card */ .separator:before {
     content: "\2666";
     color: #f00;
     /* background-color: #ddd; */
     padding: 0.2em;
 }
 
-.card .help {
+/* .card */ .help {
     margin: 2px;
     display: inline-block;
     cursor: pointer;
@@ -338,7 +348,7 @@ html {
     color: #88f;
 }
 
-.card .clickable {
+/* .card */ .clickable {
     border: 2px solid #d8d8ff;
     margin: 2px;
     display: inline-block;
@@ -348,41 +358,53 @@ html {
     background-color: #f8f8ff;
 }
 
-.card .clickable:hover {
+/* .card */ .clickable:hover {
     background-color: #e8e8ff;
 }
 
-.card .blocks > * {
+/* .card */ .blocks > * {
     /* margin-top: 8px; */
     margin-bottom: 10px;
 }
 
 
-.card .note:before {
+/* .card */ .note:before {
     content: "Note: ";
     font-weight: bold;
 }
-.card .note {
+/* .card */ .note {
     color: #550;
     background-color: #ffd;    
 }
 
-.card .tip:before {
+/* .card */ .tip:before {
     content: "Tip: ";
     font-weight: bold;
 }
-.card .tip {
+/* .card */ .tip {
     color: #005;
     background-color: #ddf;
 }
 
-.card .note, .card .tip {
+.warning:before {
+    content: "Warning: ";
+    font-weight: bold;
+}
+
+.warning {
+    color: #500;
+    background-color: #fdd;
+}
+
+/* .card */ .note, /* .card */ .tip, .warning {
     margin-top: 10px;
     margin-bottom: 10px;
     padding: 10px;
 }
 
-.card ul, .card ol {
+
+
+/* .card */ ul, /* .card */ ol {
     margin-top: 0px;
     margin-bottom: 0px;
 }

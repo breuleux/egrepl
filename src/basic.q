@@ -1,29 +1,47 @@
 
 
-main --> Greetings! -->
+help --> Main help -->
 
-  === The Earl Grey programming language
+  == The Earl Grey programming language
 
-  Earl Grey is a new language that compiles to JavaScript. Why should
-  you care? Good question!
+  [__ Earl Grey] is a new language that compiles to JavaScript. It's a
+  bit of a mad cross of CoffeeScript (as a transpiler), Python (colons
+  and significant indent) and Racket (pattern matching and macros).
 
+  Why should you care? Good question!
+
+  * A quirky, terse /?syntax
   * Advanced [pattern matching]/?patterns
   * Arbitrary new features can be defined with /?macros
 
-  ==== What to do from here
+  === The REPL
 
-  * Peruse /?help as a quick start
-  * Consult the /?index for a list of all help topics
-  * Look at /?examples
-  * ... or simply type or click /next to start the __tutorial!
+  To your right there is an [__ interactive interpreter] in which you
+  can try out the language.
+
+  | `Enter or `[Shift-Enter]  | Evaluate an expression
+  | `[Ctrl-Enter]             | Insert a new line
+  | `[Up/Down]                | Navigate history
+  | `[Control-l]              | Clear the screen
+
+  [__ Click these boxes]/[1 + 1] to execute expressions in the
+  interactive interpreter (`[Shift-click] to paste them without
+  executing them).
+
+  Type /help to display this page again if you lose it. You can also
+  view the index here/?index or by typing /help.index, and a selected
+  list of /?topics (/help.topics).
+
+  === Links
+
+  * [Source code]::https://github.com/breuleux/earl-grey
 
 
+topics --> Selected topics -->
 
-help --> Help starting point -->
+  == Selected topics
 
-  === Help
-
-  ==== Basic topics
+  === Basic topics
 
   /? numbers / strings / variables
 
@@ -34,7 +52,7 @@ help --> Help starting point -->
 
 interface --> REPL interface (keyboard bindings etc.) -->
 
-  === Keyboard controls
+  == Keyboard controls
 
   | `[Up/Down]           | Navigate history
   | `[Shift-Enter]       | Evaluate an expression
@@ -48,7 +66,7 @@ interface --> REPL interface (keyboard bindings etc.) -->
 
 brackets --> The semantics of brackets -->
 
-  === The semantics of brackets in Earl Grey
+  == The semantics of brackets in Earl Grey
 
   Brackets in EG are certainly "odd", in the sense that they don't
   follow conventional semantics: blocks are defined using indent or
@@ -89,7 +107,7 @@ brackets --> The semantics of brackets -->
   them. Square brackets are a natural choice for grouping because it
   preserves conventional indexing syntax.
 
-  ==== Recovering the standard semantics for parentheses
+  === Recovering the standard semantics for parentheses
 
   Parentheses are currently illegal tokens, but that needs not be the
   case forever. By mapping `f(expr) to `f{expr} and `(expr) to
@@ -109,7 +127,7 @@ brackets --> The semantics of brackets -->
 
 syntax --> Syntax overview -->
 
-  === Syntax overview
+  == Syntax overview
 
   Superficially, Earl Grey looks a lot like Python, if function calls
   used curly braces instead of parentheses.
@@ -182,7 +200,7 @@ syntax --> Syntax overview -->
 
 numbers --> Numeric values -->
 
-  === Numbers
+  == Numbers
 
   Integers and floating point numbers can be written in decimal form
   with the usual syntax, e.g. /[10 + 89.99]. The semantics are the
@@ -195,7 +213,7 @@ numbers --> Numeric values -->
   | __Hexadecimal   | / 16rFF / 16r100 / 16rDEADBEEF / 16r0.8
   | __[Binary etc.] | / 2r1110 / 3r20 / 36rZAZZ
 
-  ==== Numerical operations
+  === Numerical operations
 
   | __Addition            | / 10 + 20
   | __Subtraction         | / 10 - 20
@@ -210,7 +228,7 @@ numbers --> Numeric values -->
 
 strings --> Strings -->
 
-  === Strings
+  == Strings
 
   Strings are delimited by quotation marks (`["]):
 
@@ -238,7 +256,7 @@ strings --> Strings -->
 
 variables --> Declaring and setting variables -->
 
-  === Variables
+  == Variables
 
   | Declare __read-only | / let x = 1234
   | Declare __mutable   | / var x = 1234
@@ -271,7 +289,7 @@ variables --> Declaring and setting variables -->
 
 arrays --> Arrays -->
 
-  === Arrays
+  == Arrays
 
   Arrays are one of EG's basic data structures (the other being
   /?objects). Arrays are a list of elements, declared with curly
@@ -314,7 +332,7 @@ arrays --> Arrays -->
 
 objects --> Objects -->
 
-  === Objects
+  == Objects
 
   Arrays are one of EG's basic data structures (the other being
   /?arrays). Objects associate keys (which are always strings) to
@@ -359,7 +377,7 @@ objects --> Objects -->
 
 with --> The `with operator -->
 
-  === The `with operator
+  == The `with operator
 
   The `with operator in EG has __nothing to do with JavaScript's `with
   operator. In EG, `with basically lets you "pull" a sub-expression
@@ -383,7 +401,7 @@ with --> The `with operator -->
 
 where --> The `where operator -->
 
-  === The `where operator
+  == The `where operator
 
   `where can be used to declare variables that are local to some
   expression.
@@ -408,7 +426,7 @@ where --> The `where operator -->
 
 each --> The `each operator -->
 
-  === The `each operator
+  == The `each operator
 
   `each iterates a function over an array. If it is in expression
   position, it also accumulates results into a new array.
@@ -445,7 +463,7 @@ each --> The `each operator -->
     other clause types will throw an exception if a match is not found
     and there are no more clauses to try.
 
-  ==== Helper functions (useful with `each)
+  === Helper functions (useful with `each)
 
   * [items/items{{a = 1, b = 2, c = 3}}]: make an array of key\/value
     pairs from an object.
@@ -459,7 +477,7 @@ each --> The `each operator -->
 
 deconstruction --> Deconstructing data structures -->
 
-  === Deconstructing data structures
+  == Deconstructing data structures
 
   Extracting fields from arrays and objects can be sometimes
   tedious. Argument deconstruction makes this easier. Arrays as well
@@ -473,7 +491,7 @@ deconstruction --> Deconstructing data structures -->
     {=> x, => y} = {x = 4, y = 5}
     x + y
 
-  ==== Deconstructing into objects
+  === Deconstructing into objects
 
   Arrays and objects can be deconstructed into objects just as well as
   into variables (this is particularly useful for examples because you
@@ -486,7 +504,7 @@ deconstruction --> Deconstructing data structures -->
 
   / {{a, {b, c}, {=> d}} = {1, {2, 3}, {d = 4}}}
 
-  ==== Default and rest arguments
+  === Default and rest arguments
 
   Remember that you can remove the outer curly brackets if you want to
   put the results in variables instead of into an object.
@@ -497,7 +515,7 @@ deconstruction --> Deconstructing data structures -->
 
   / {{first, *middle, last} = {1, 2, 3, 4, 5}}
 
-  ==== Type checking and coercion
+  === Type checking and coercion
 
   / String? s = 44  ;; this will throw an exception
 
@@ -511,7 +529,7 @@ deconstruction --> Deconstructing data structures -->
 
 patterns --> Pattern matching -->
 
-  === Pattern matching
+  == Pattern matching
 
   A __pattern is an expression which can be "matched" against a
   value. Matching a pattern against a value can either _fail, in which
@@ -543,7 +561,7 @@ patterns --> Pattern matching -->
     | `[p1 or p2]  | /[{1,x} or {x,1} = {5,1}, x] | Must match _one pattern, tried sequentially. All branches must contain the same variables.
     | [`else, `[_]] | /{{a, _} = {1, 2}} | Match anything, discard value
 
-  ==== Where to use a pattern
+  === Where to use a pattern
 
   In general, everything to the left of the `[=] and `[->] operators
   is a pattern. Control structures such as /?match and /?each expect
@@ -582,7 +600,7 @@ patterns --> Pattern matching -->
 
 macros --> Macros -->
 
-  === Macros
+  == Macros
 
   __Macros permit the easy development of new language features. In
   EG, a macro receives a data structure containing an abstract
@@ -592,7 +610,7 @@ macros --> Macros -->
   similar to that of Lisp, Scheme, Racket or Clojure. It is also
   hygienic/?hygiene.
 
-  ==== A simple example
+  === A simple example
 
   The `unless macro is the opposite of `if: it executes its body when
   the condition is _not true. The definition is very straightforward:
@@ -615,7 +633,7 @@ macros --> Macros -->
   list is a nameless rest argument, so it's just a convenient way to
   discard the first three arguments.
 
-  ==== The basics
+  === The basics
 
   * The single quote (`[']) returns the [quoted form]/?quote of its
     argument, i.e. its abstract syntax. (Examples: /['x], /['{x, y}],
@@ -630,9 +648,7 @@ macros --> Macros -->
   Use the quote\/unquote operators to extract the relevant parts of
   the macro's arguments and to construct the return value.
 
-  ==== Further reading
-
-  The subject of macros can be complex.
+  === Further reading
 
   * See /?quote to read about the abstract representation of programs.
 

@@ -1,15 +1,15 @@
 
 require:
    "./kb" as kb
-   "earl-grey/earl-grey" as eg
-   "earl-grey/util" ->
+   "earl-grey" as eg
+   "earl-grey/lib/util" ->
       GenSym
-   "earl-grey/location" ->
+   "earl-grey/lib/location" ->
       Location, highlight_locations
       format_error
-   "earl-grey/lex" ->
+   "earl-grey/lib/lex" ->
       tokenize
-   "earl-grey/parse" ->
+   "earl-grey/lib/parse" ->
       parse
    quaint
    codemirror as CodeMirror
@@ -30,16 +30,10 @@ globals:
 gensym = GenSym{"io_"}
 
 
-;; create_node{tag, kv, contents} =
-;;    node = document.createElement{tag}
-;;    items{kv} each {k, v} ->
-;;       node[k] = v
-;;    [Array! contents] each
-;;       String? s ->
-;;          node.appendChild{document.createTextNode{s}}
-;;       other ->
-;;          node.appendChild{other}
-;;    node
+tag_namespaces = {=}
+[{...} each tag -> tag_namespaces[tag] = "http://www.w3.org/2000/svg"] with
+   .svg
+   .circle, .line, .path, .rect, .text
 
 
 make_dom{match, default_tag = "div"} =
@@ -65,11 +59,12 @@ make_dom{match, default_tag = "div"} =
          other ->
             tag = other
 
-      node = match tag:
-         .svg ->
-            jQuery{"<svg width=0 height=0></svg>"}[0]
-         else ->
+      node = match tag_namespaces[tag]:
+         undefined? ->
             document.createElement{tag}
+         ns ->
+            document.createElementNS{ns, tag}
+            
       if classes.length:
          node.className = classes.join{" "}
       items{props} each {match k, v} ->
@@ -361,6 +356,7 @@ class Repl:
    eval{text} =
       [gen{} !! e -> handle{e}] where
          gen{} =
+            ;; g = "(function($out){return (" + @generate{text} + ")})(3411)"
             g = @generate{text}
             #success{@evaluator{g}}
          handle{e} =
@@ -377,9 +373,17 @@ class Repl:
          hl
 
    process{text, display_in = true, var sink = false} =
+
+      obox = make_dom with div %
+      name = gensym{}
+      obox.id = name
+
+      window.$current += 1
+      window.$io.push with obox
+
       if display_in:
          @add_to_history{text}
-      real_text = text ;; "\n" + text + "\n"
+
       var target = 1
       sink and= 1
       node1 = make_dom with
@@ -390,16 +394,20 @@ class Repl:
                   .entry % @highlight{text}
             else:
                ""
+
+      @target.appendChild{node1}
+      @target.appendChild{obox}
+
       node2 =
-         match @eval{real_text}:
+         match @eval{text}:
             when text.trim{} === "" ->
                ""
             #success{undefined?} ->
                ""
             #success{Node? n} ->
-               if [.card %]? n:
-                  target = 2
-                  sink and= 2
+               ;; if [.card %]? n:
+               ;;    target = 2
+               ;;    sink and= 2
                n
                ;; .displaybanner %
                ;; .result % n
@@ -412,13 +420,10 @@ class Repl:
                   .errbanner %
                   .result % .eg % repr{error}
 
-      name = gensym{}
-      ;; node2.props.id = name
-
-      @target.appendChild{node1}
-
       match target:
-         1 -> @target.appendChild{make_dom with node2}
+         1 ->
+            obox.appendChild with
+               make_dom with node2
          2 -> @insert_page{0, -1, node2.title or "untitled", node2}
 
       ;; target.appendChild{node2}
@@ -770,18 +775,21 @@ setup{} =
 
    engine = quaint.Engine{quaint.dispatch}
 
-   window.quaint = quaint & {engine = engine}
+   window.__qengine = engine
    window.__cards = __cards
    window.__repl = repl
    window.make_dom = make_dom
+   window.$io = {}
+   window.$current = -1
 
    repl.eval with "
 
       globals:
-         _cards, __cards, alert, document
+         __cards, alert, document
          window, _current, _next, _help
-         quaint, repl, __repl
+         __qengine, repl, __repl
          make_dom
+         $io, $current
 
       var _current = -1
 
@@ -803,7 +811,26 @@ setup{} =
          topic -> '[^h]{^topic}
 
       macro Q{_, _, _, arg}:
-         '[.card % quaint.engine.run{^arg}]
+         '[.card % __qengine.run{^arg}]
+
+      loader{url, fn} =
+         script = make_dom with script %
+            async = true
+            src = url
+            type = \"text/javascript\"
+            onload = fn
+         document.head.appendChild{script}
+
+      macro load{*, '{^url as ^v, ^body}}:
+         '[splice: [globals: ^v, loader{^url, {} -> ^body}, undefined]]
+
+      macro $out{*, match}:
+         do:
+            globals: $current
+         #void{} ->
+            '$io[^=$current]
+         expr ->
+            '$io[^=$current][^expr]
    "
 
    ;; repl.process{"help main", false}

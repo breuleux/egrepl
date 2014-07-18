@@ -1,14 +1,102 @@
 
 examples --> List of examples -->
 
-  === Examples
+  == Examples
 
   Click on an example's name to view and execute the code associated
   to it. If you want to edit the code, you can press `Up to recall it
   from history and `Enter or `[Shift-Enter] to resubmit.
 
+  .note ..
+    The `load macro loads a script asynchronously from an url and
+    declares a global variable in the process. Once it is loaded,
+    though, you can of course reuse the library without needing the
+    `load block. In fact, ideally, you __shouldn't. See below.
 
-  ==== Classics
+  .warning ..
+    If an example uses a `load statement, clicking on it more than
+    once will load the library more than once. This can lead to funky
+    results.
+
+  === Libraries
+
+  Plotting with `flot /
+    $out.style.height = "500px" ;; making room
+    load "http://www.flotcharts.org/flot/jquery.flot.js" as $:
+       $.plot{$out, {p1, p2, p3}} where
+          p1 = 1..100 each i -> {i, Math.sin{i / 10}}
+          p2 = 1..100 each i -> {i, Math.sin{i / 10 - 1}}
+          p3 = 1..100 each i -> {i, Math.sin{i / 10} + 0.25}
+
+  Google maps /
+    ;; we need to give google a callback to execute after loading, so
+    ;; we make mapinit a global variable (otherwise google can't see it!)
+    globals: mapinit
+    $out.style.height = "500px" ;; important!
+    mapinit{} =
+       new google.maps.Map{$out} with {
+          zoom = 17
+          center = new google.maps.LatLng{48.8582, 2.2945}
+       }
+    load "https://maps.googleapis.com/maps/api/js?v=3.exp&callback=mapinit" as google:
+       pass
+
+  Simple TODO list (React) /
+
+    ;; This macro is sugar to create DOM elements (no need for JSX here!)
+    macro [%%]{*, #data{#symbol{tag}, #multi! {*exprs}}}:
+       props = #data{#symbol{"="}}
+       children = {}
+       exprs each match x ->
+          '[^k = ^v] -> props.push{x}
+          else -> children.push{x}
+       'React.DOM[^=tag]{^props, ^*children}
+    
+    ;; This macro is sugar for React.createClass
+    macro react{*, #data{v and #symbol{name}, #multi! {*exprs}}}:
+       '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
+
+    $out.style.height = "300px"
+    load "http://fb.me/react-with-addons-0.11.0.js" as React:
+       
+       react TodoList:
+          render{} =
+             ul %%
+                this.props.items each item ->
+                   li %% item
+       
+       react TodoApp:
+          getInitialState{} =
+             {items = {}, text = ""}
+          render{} =
+             me = this
+             div %%
+                h3 %% .TODO
+                form %%
+                   onSubmit{e} =
+                      e.preventDefault{}
+                      me.setState with {
+                         items = me.state.items ++ {me.state.text}
+                         text = ""
+                      }
+                   input %%
+                      onChange{e} =
+                         me.setState with {text = e.target.value}
+                      value = this.state.text
+                   button %%
+                      "Add #" + String{this.state.items.length + 1}
+                TodoList %%
+                   items = this.state.items
+                button %%
+                   .Clear
+                   onClick{e} =
+                      me.setState with {items = {}}
+       
+       React.renderComponent{TodoApp %%, $out}
+
+
+
+  === Classics
 
   Fibonacci numbers /
      fib{match} =
@@ -66,7 +154,7 @@ examples --> List of examples -->
      lines.join{"\n"}
 
 
-  ==== Language features
+  === Language features
 
   Point class /
      class Point:
@@ -84,14 +172,14 @@ examples --> List of examples -->
       p1.distance{p2}}
 
 
-  ==== Cool tricks
+  === Cool tricks
 
   Local operator redefinition /
      10 + 90 where
         a + b = a - b
 
 
-  ==== Macros
+  === Macros
 
   Swap operator /
      macro [<=>]{*, #data{a, b}}:

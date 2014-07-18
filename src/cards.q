@@ -1,7 +1,7 @@
 
 blocks --> Blocks and indent -->
 
-  === Blocks and indent
+  == Blocks and indent
 
   A __block is a sequence of statements or expressions. Blocks are
   defined using square brackets `[[]]. Variables defined inside a
