@@ -121,8 +121,8 @@ examples --> List of examples -->
           i -> i
     ===
     fizzbuzz{100}
-
-  The "99 bottles of beer" song (long output) /
+  span.separator ..
+  The "99 bottles of beer" song /
      bottle{match} =
         0 -> "no more bottles"
         1 -> "one bottle"
@@ -134,16 +134,15 @@ examples --> List of examples -->
      
      capitalize{s} =
         s[0].toUpperCase{} + s.substring{1}
-     
-     lines = {}
-     0..99 each i ->
-        n = 99 - i
-        lines.push with
-           capitalize{bottle{n}} + " of beer on the wall, " + bottle{n} + " of beer."
-           action{n} + " " + bottle{[n + 99] mod 100} + " of beer on the wall."
-           ""
-     lines.join{"\n"}
 
+     div %
+        style = "height: 500px; overflow: auto"
+        0..99 each i ->
+           n = 99 - i
+           p %
+              capitalize{bottle{n}}, " of beer on the wall, ", bottle{n}, " of beer."
+              br %
+              action{n}, " ", bottle{[n + 99] mod 100}, " of beer on the wall."
 
   === Language features
 
@@ -161,14 +160,16 @@ examples --> List of examples -->
      {p1, p2
       Point? p1, Point? {400, 700}
       p1.distance{p2}}
-
-
-  === Cool tricks
-
-  Local operator redefinition /
-     10 + 90 where
-        a + b = a - b
-
+  span.separator ..
+  Multiplication table (HTML generation) /
+     div %
+        style % "table.mult td { width: 2em; text-align: right; }"
+        h2 % "Multiplication table"
+        table.mult %
+           0..10 each i ->
+              tr %
+                 0..10 each j ->
+                    td % i * j
 
   === Macros
 
@@ -206,4 +207,10 @@ examples --> List of examples -->
      ===
      first4 = ~$.substring{0, 4}
      first4{"hello"}
+
+  === Miscellaneous
+
+  Local operator redefinition /
+     10 + 90 where
+        a + b = a - b
 
