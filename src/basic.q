@@ -19,10 +19,10 @@ help --> Main help -->
   To your right there is an [__ interactive interpreter] in which you
   can try out the language.
 
-  | `Enter or `[Shift-Enter]  | Evaluate an expression
-  | `[Ctrl-Enter]             | Insert a new line
-  | `[Up/Down]                | Navigate history
-  | `[Control-l]              | Clear the screen
+  | `Enter or `[Shift-Enter]            | Evaluate an expression
+  | `[Ctrl-Enter]                       | Insert a new line
+  | `[Up/Down] or `[Ctrl-Up/Ctrl-Down]  | Navigate history
+  | `[Control-L]                        | Clear the screen
 
   [__ Click these boxes]/[1 + 1] to execute expressions in the
   interactive interpreter (`[Shift-click] to paste them without

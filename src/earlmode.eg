@@ -70,13 +70,17 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
          if stream.sol{}:
             then:
-               state.sol = true
-               index = state.nest.length - 1
-               match state.nest[index]:
-                  {a, _, _} ->
-                     state.nest[index] = {a, stream.indentation{}, false}
-                  else ->
-                     pass
+               if stream.match{R"===$"}:
+                  then:
+                     return "sep"
+                  else:
+                     state.sol = true
+                     index = state.nest.length - 1
+                     match state.nest[index]:
+                        {a, _, _} ->
+                           state.nest[index] = {a, stream.indentation{}, false}
+                        else ->
+                           pass
             else:
                state.sol = false
 

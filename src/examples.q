@@ -21,9 +21,19 @@ examples --> List of examples -->
   === Libraries
 
   Plotting with `flot /
-    $out.style.height = "500px" ;; making room
+    loading "http://www.flotcharts.org/flot/jquery.flot.js" as $
+    ===
+    $out.elem.style.height = "500px" ;; making room
+    $.plot{$out.elem, {p1, p2, p3}} where
+       p1 = 1..100 each i -> {i, Math.sin{i / 10}}
+       p2 = 1..100 each i -> {i, Math.sin{i / 10 - 1}}
+       p3 = 1..100 each i -> {i, Math.sin{i / 10} + 0.25}
+    undefined
+
+  Plotting with `flot (old) /
+    $out.elem.style.height = "500px" ;; making room
     load "http://www.flotcharts.org/flot/jquery.flot.js" as $:
-       $.plot{$out, {p1, p2, p3}} where
+       $.plot{$out.elem, {p1, p2, p3}} where
           p1 = 1..100 each i -> {i, Math.sin{i / 10}}
           p2 = 1..100 each i -> {i, Math.sin{i / 10 - 1}}
           p3 = 1..100 each i -> {i, Math.sin{i / 10} + 0.25}
@@ -32,9 +42,9 @@ examples --> List of examples -->
     ;; we need to give google a callback to execute after loading, so
     ;; we make mapinit a global variable (otherwise google can't see it!)
     globals: mapinit
-    $out.style.height = "500px" ;; important!
+    $out.elem.style.height = "500px" ;; important!
     mapinit{} =
-       new google.maps.Map{$out} with {
+       new google.maps.Map{$out.elem} with {
           zoom = 17
           center = new google.maps.LatLng{48.8582, 2.2945}
        }
@@ -56,7 +66,7 @@ examples --> List of examples -->
     macro react{*, #data{v and #symbol{name}, #multi! {*exprs}}}:
        '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
 
-    $out.style.height = "500px"
+    $out.elem.style.height = "500px"
     load "http://fb.me/react-with-addons-0.11.0.js" as React:
        
        react Quaint:
@@ -83,7 +93,7 @@ examples --> List of examples -->
                       __html = make_dom{Q this.state.text}.innerHTML
                    }
 
-       React.renderComponent{Quaint %% [initial = ...], $out} with
+       React.renderComponent{Quaint %% [initial = ...], $out.elem} with
           "Quaint::http://breuleux.net/quaint is a _bit like Markdown, but not really."
 
 
@@ -94,7 +104,7 @@ examples --> List of examples -->
         0 -> 0
         1 -> 1
         n -> fib{n - 1} + fib{n - 2}
-
+     ===
      fib{30}
   [[imperative]] /
      fib{n} =
@@ -102,14 +112,14 @@ examples --> List of examples -->
         1..n each _ ->
            {a, b} = {b, a + b}
         a
-
+     ===
      fib{30}
   span.separator ..
   Factorial numbers /   
      fact{match} =
         0 -> 1
         n -> n * fact{n - 1}
-
+     ===
      fact{15}
 
   FizzBuzz /
@@ -119,7 +129,7 @@ examples --> List of examples -->
           i when i mod 3 == 0 -> "Fizz"
           i when i mod 5 == 0 -> "Buzz"
           i -> i
-
+    ===
     fizzbuzz{100}
 
   The "99 bottles of beer" song (long output) /
@@ -155,7 +165,7 @@ examples --> List of examples -->
            [dx*dx + dy*dy] ** 0.5 where
               dx = @x - p.x
               dy = @y - p.y
-
+     ===
      p1 = Point{100, 300}
      p2 = Point{400, 700}
      {p1, p2
@@ -180,7 +190,7 @@ examples --> List of examples -->
         '[let temp = ^a
           ^a = ^b
           ^b = temp]
-
+     ===
      var {foo, bar} = {8, 88}
      foo <=> bar
      {foo, bar}
@@ -188,7 +198,7 @@ examples --> List of examples -->
   Unless /
      macro unless{*, #data{test, body}}:
         'if{not ^test, ^body}
-
+     ===
      unless 0:
         "yes"
   span.separator ..
@@ -200,9 +210,10 @@ examples --> List of examples -->
         ;; visible)
         dolla = body.env.mark{'$}
         '[{^dolla} -> ^body]
-
+     ===
      add10 = ~[$ + 10]
+     add10{91}
+     ===
      first4 = ~$.substring{0, 4}
-
-     {add10{91}, first4{"hello"}}
+     first4{"hello"}
 

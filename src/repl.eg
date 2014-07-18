@@ -167,6 +167,20 @@ dom_node_clear{x} =
       x.removeChild{x.children[0]}
 
 
+class Outputter:
+
+   constructor{@elem} =
+      pass
+
+   log{*data} =
+      @elem.appendChild with
+         make_dom with div %
+            data each match x ->
+               Element? or Node? -> x
+               else -> .eg % repr{x}
+      undefined
+
+
 class Repl:
 
 
@@ -372,6 +386,11 @@ class Repl:
       ".cm-s-repl" %
          hl
 
+   lock{} =
+      @__waiting = true
+   unlock{} =
+      @__waiting = false
+
    process_all{text, display_in = true, sink = false} =
       text.split{"\n===\n"} each part ->
          @process{part, display_in, sink}
@@ -383,7 +402,7 @@ class Repl:
       obox.id = name
 
       window.$current += 1
-      window.$io.push with obox
+      window.$io.push with Outputter{obox}
 
       if display_in:
          @add_to_history{text}
@@ -402,59 +421,64 @@ class Repl:
       @target.appendChild{node1}
       @target.appendChild{obox}
 
-      node2 =
-         match @eval{text}:
-            when text.trim{} === "" ->
-               ""
-            #success{undefined?} ->
-               ""
-            #success{Node? n} ->
-               ;; if [.card %]? n:
-               ;;    target = 2
-               ;;    sink and= 2
-               n
-               ;; .displaybanner %
-               ;; .result % n
-            #success{value} ->
-               .out %
-                  .outbanner %
-                  .result % .eg % repr{value}
-            #failure{error} ->
-               .err %
-                  .errbanner %
-                  .result % .eg % repr{error}
+      remainder{} where remainder{} =
+         if [@__waiting]:
+            setTimeout{remainder, 10}
+            return
 
-      match target:
-         1 ->
-            obox.appendChild with
-               make_dom with node2
-         2 -> @insert_page{0, -1, node2.title or "untitled", node2}
+         node2 =
+            match @eval{text}:
+               when text.trim{} === "" ->
+                  ""
+               #success{undefined?} ->
+                  ""
+               #success{Node? n} ->
+                  ;; if [.card %]? n:
+                  ;;    target = 2
+                  ;;    sink and= 2
+                  n
+                  ;; .displaybanner %
+                  ;; .result % n
+               #success{value} ->
+                  .out %
+                     .outbanner %
+                     .result % .eg % repr{value}
+               #failure{error} ->
+                  .err %
+                     .errbanner %
+                     .result % .eg % repr{error}
 
-      ;; target.appendChild{node2}
+         match target:
+            1 ->
+               obox.appendChild with
+                  make_dom with node2
+            2 -> @insert_page{0, -1, node2.title or "untitled", node2}
 
-      match sink:
-         1 -> @sink{}
-         ;; 2 -> @sink2{}
-         else -> pass
+         ;; target.appendChild{node2}
 
-      collapse{e} =
-         e.stopPropagation{}
-         at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
-         jQuery{this}.toggleClass{"collapsed"}
-         if at_top:
-            jQuery{@box}.scrollTop{@box.scrollHeight}
+         match sink:
+            1 -> @sink{}
+            ;; 2 -> @sink2{}
+            else -> pass
 
-      on{sel} =
-         jQuery{"#" + name + " " + sel}
+         collapse{e} =
+            e.stopPropagation{}
+            at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
+            jQuery{this}.toggleClass{"collapsed"}
+            if at_top:
+               jQuery{@box}.scrollTop{@box.scrollHeight}
 
-      on{".sequence"}.addClass{"complex"}
-      on{".object"}.addClass{"complex"}
+         on{sel} =
+            jQuery{"#" + name + " " + sel}
+
+         on{".sequence"}.addClass{"complex"}
+         on{".object"}.addClass{"complex"}
       
-      on{".complex"}.click{collapse}
-      on{".complex .complex .complex"}.addClass{.collapsed}
+         on{".complex"}.click{collapse}
+         on{".complex .complex .complex"}.addClass{.collapsed}
 
-      on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
-      on{".traceback"}.addClass{.collapsed}.click{collapse}
+         on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
+         on{".traceback"}.addClass{.collapsed}.click{collapse}
 
 
 
@@ -785,6 +809,7 @@ setup{} =
    window.make_dom = make_dom
    window.$io = {}
    window.$current = -1
+   window.$libs = {=}
 
    repl.eval with "
 
@@ -793,7 +818,7 @@ setup{} =
          window, _current, _next, _help
          __qengine, repl, __repl
          make_dom
-         $io, $current
+         $io, $current, $libs
 
       var _current = -1
 
@@ -824,9 +849,37 @@ setup{} =
             type = \"text/javascript\"
             onload = fn
          document.head.appendChild{script}
+         undefined
 
       macro load{*, '{^url as ^v, ^body}}:
          '[splice: [globals: ^v, loader{^url, {} -> ^body}, undefined]]
+
+      macro loading{*, '[^url as ^v]}:
+         '[
+            splice:
+               globals: ^v
+               [
+                  url = ^url
+                  if $libs[url]:
+                     then:
+                        $out.log with .note %
+                           \"\\\"\" + url + \"\\\" is already loaded/loading.\"
+                     else:
+                        $libs[url] = true
+                        __repl.lock{}
+                        timer = setTimeout{f, 2000} where f{} =
+                           $out.log with .warning %
+                                                                                                \"Loading \\\"\" + url + \"\\\" is taking more than 2 seconds.\"
+                              \"A green box will appear here once if/when it is loaded.\"
+                           __repl.unlock{}
+                           $libs[url] = false
+                        loader{url} with {} ->
+                           $out.log with .success %
+                              \"Loaded \\\"\" + url + \"\\\"!\"
+                           __repl.unlock{}
+                           clearTimeout{timer}
+               ]
+         ]
 
       macro $out{*, match}:
          do:
