@@ -101,7 +101,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                   when stream.match{"..."} ->
                      state.previous = .id
                      "ellipsis"
-                  when stream.match{R"\\.[A-Za-z0-9_$]+"} ->
+                  when stream.match{R"\.[A-Za-z0-9_$]+"} ->
                      state.previous = .id
                      "string"
                   when stream.match{R"@[A-Za-z0-9$]+"} ->
@@ -131,10 +131,10 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                         when stream.match{R" +(with|where|when|and|not|or|in|mod|each|as)( |$)", false} ->
                            state.previous = .id
                            "variable"
-                        when stream.match{R" *:| +[A-Za-z0-9$\\[\\{\"]", false} ->
+                        when stream.match{R" *:| +[A-Za-z0-9$\[\{\"]", false} ->
                            state.previous = .id
                            "keyword"
-                        when stream.match{R" +[+\\-*/~^<>=%&|?!@#.:']+[A-Za-z0-9$\\[\\{]", false} ->
+                        when stream.match{R" +[+\-*/~^<>=%&|?!@#.:']+[A-Za-z0-9$\[\{]", false} ->
                            state.previous = .id
                            "keyword"
                         else ->
@@ -174,7 +174,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      null
 
             .string ->
-               stream.match{R"(\\\\\"|[^\"])+"}
+               stream.match{R"(\\\"|[^\"])+"}
                match stream.eat{R"\""}:
                   undefined? ->
                      "string"

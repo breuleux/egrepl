@@ -35,7 +35,7 @@ examples --> List of examples -->
     load "http://fb.me/react-with-addons-0.11.0.js" as React
     ===
     ;; This macro is sugar to create DOM elements (no need for JSX here!)
-    macro [%%]{*, #data{#symbol{tag}, #multi! {*exprs}}}:
+    macro [%%]{*, #data{#symbol{tag}, #multi! #multi{*exprs}}}:
        props = #data{#symbol{"="}}
        children = {}
        exprs each match x ->
@@ -44,7 +44,7 @@ examples --> List of examples -->
        'React.DOM[^=tag]{^props, ^*children}
     
     ;; This macro is sugar for React.createClass
-    macro react{*, #data{v and #symbol{name}, #multi! {*exprs}}}:
+    macro react{*, #data{v and #symbol{name}, #multi! #multi{*exprs}}}:
        '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
     ===
     react Quaint:
