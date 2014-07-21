@@ -291,9 +291,9 @@ class Repl:
                   else ->
                      @submit{}
 
-         "Ctrl-Enter" = "newlineAndIndent"
+         "Shift-Enter" = "newlineAndIndent"
 
-         "Shift-Enter"{cm} =
+         "Ctrl-Enter"{cm} =
             @submit{}
 
          "Ctrl-Up"{cm} =
@@ -840,7 +840,7 @@ setup{} =
          topic -> '[^h]{^topic}
 
       macro Q{_, _, _, arg}:
-         '[.card % __qengine.run{^arg}]
+         '__qengine.run{^arg}
 
       loader{url, fn} =
          script = make_dom with script %

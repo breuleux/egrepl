@@ -5,7 +5,7 @@ examples --> List of examples -->
 
   Click on an example's name to view and execute the code associated
   to it. If you want to edit the code, you can press `Up to recall it
-  from history and `Enter or `[Shift-Enter] to resubmit.
+  from history and `Enter or `[Ctrl-Enter] to resubmit.
 
   === Libraries
 

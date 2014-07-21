@@ -19,8 +19,8 @@ help --> Main help -->
   To your right there is an [__ interactive interpreter] in which you
   can try out the language.
 
-  | `Enter or `[Shift-Enter]            | Evaluate an expression
-  | `[Ctrl-Enter]                       | Insert a new line
+  | `Enter or `[Ctrl-Enter]             | Evaluate an expression
+  | `[Shift-Enter]                      | Insert a new line
   | `[Up/Down] or `[Ctrl-Up/Ctrl-Down]  | Navigate history
   | `[Control-L]                        | Clear the screen
 
@@ -57,8 +57,8 @@ interface --> REPL interface (keyboard bindings etc.) -->
   == Keyboard controls
 
   | `[Up/Down]           | Navigate history
-  | `[Shift-Enter]       | Evaluate an expression
-  | `[Ctrl-Enter]        | Insert a new line
+  | `[Ctrl-Enter]        | Evaluate an expression
+  | `[Shift-Enter]       | Insert a new line
   | `[Control-l]         | Clear the screen
 
   `Enter will evaluate the current expression if the cursor is on the

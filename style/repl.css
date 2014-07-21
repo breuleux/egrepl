@@ -526,6 +526,7 @@ body {
 
 .close_tab {
     padding: 4px;
+    cursor: pointer;
 }
 
 .close_tab:before {
