@@ -63,7 +63,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
          mode = .code
          previous = null
          sol = true
-         nest = {{0, 0, false}}
+         nest = {{"", 0, 0, false}}
       }
 
       token{stream, state} =
@@ -77,8 +77,8 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      state.sol = true
                      index = state.nest.length - 1
                      match state.nest[index]:
-                        {a, _, _} ->
-                           state.nest[index] = {a, stream.indentation{}, false}
+                        {o, a, _, _} ->
+                           state.nest[index] = {o, a, stream.indentation{}, false}
                         else ->
                            pass
             else:
@@ -146,21 +146,24 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                   when stream.match{re.numr} or stream.match{re.num} ->
                      state.previous = .id
                      "number"
-                  when stream.match{re.op2_open} ->
+                  when stream.match{re.op2_open, false} ->
+                     opchar = stream.match{re.op2_open}[0]
                      state.previous = .lowprio
                      state.nest.push with
                         if stream.eol{}:
                            then: {
+                              opchar
                               n
                               n + config.indentUnit
                               true
-                           } where n = state.nest[state.nest.length - 1][1]
+                           } where n = state.nest[state.nest.length - 1][2]
                            else: {
+                              opchar
                               n
                               n + 1
                               true
                            } where n = stream.column{}
-                     "punctuation"
+                     "open"
                   when stream.match{re.comma} ->
                      state.previous = .comma
                      "punctuation"
@@ -168,7 +171,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      state.previous = .punct
                      if state.nest.length > 1:
                         state.nest.pop{}
-                     "punctuation"
+                     "close"
                   else ->
                      stream.next{}
                      null
@@ -187,7 +190,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
       indent{state, line} =
 
-         {outer, inner, first} = state.nest[index] where
+         {_, outer, inner, first} = state.nest[index] where
             index = state.nest.length - 1
 
          add =
@@ -205,14 +208,14 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
          state.sol = true
          index = state.nest.length - 1
          match state.nest[index]:
-            {a, _, _} ->
-               state.nest[index] = {a, 0, false}
+            {o, a, _, _} ->
+               state.nest[index] = {o, a, 0, false}
             else ->
                pass
 
       lineComment = ";;"
 
-      electricInput = R'[start, *" ", in "]}", end]
+      electricInput = R'[start, *" ", in "]})", end]
 
 
 

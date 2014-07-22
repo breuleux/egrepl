@@ -37,18 +37,35 @@ help --> Main help -->
   === Links
 
   * [Source code]::https://github.com/breuleux/earl-grey
+  * IRC: `[#earlgrey] on FreeNode
 
 
 topics --> Selected topics -->
 
   == Selected topics
 
+  .note ..
+    The /?index contains a list of all help topics.
+
   === Basic topics
 
-  /? numbers / strings / variables
+  /? numbers / strings / variables / blocks / syntax / arrays / objects
 
+  === Concepts
 
-  The /?index contains a list of all help topics.
+  /? patterns / deconstruction / predicates / projectors / errors
+
+  === Features
+
+  /? with / where / each
+
+  === Macros
+
+  /? macros / quote / hygiene
+
+  === Examples
+
+  /? examples
 
 
 
@@ -243,11 +260,25 @@ strings --> Strings -->
 
   / "Line 1\nLine 2\nLine 3"
 
-  A string can span multiple lines:
+  Instead of escaping quotes, you can also write strings using
+  `S[...]. Note that quotation marks and brackets in the string must
+  be balanced.
+
+  / S[Hello, my name is "Olivier"]
+
+
+  A string can span multiple lines, whether with quotes or
+  `S[...]. Line breaks, whitespace and indent is preserved verbatim.
 
   /
     "this is
      perfectly acceptable"
+
+  /
+    S[
+      this,
+      too!
+    ]
 
   As a shortcut, purely alphanumeric strings can be denoted with the
   dot operator: [/[.ABC]], [/[.Peter]], [/[.XYZ == "XYZ"]]. Note that
@@ -286,6 +317,21 @@ variables --> Declaring and setting variables -->
   Be are that `[[]] only creates a block when it encloses more than
   one expression. An indented block is completely equivalent to
   wrapping it in `[[]]~s.
+
+  === Global variables
+
+  The `globals statement can be used to declare variables as
+  global. For instance, if you load jQuery as an external script and
+  it defines the global variables `[$] and `jQuery, you need to tell
+  EG about it as follows:
+
+  /
+    globals:
+       $, jQuery
+
+  If you don't, EG will consider both variables to be undeclared,
+  which throws a syntax error.
+
 
 
 
@@ -411,13 +457,25 @@ where --> The `where operator -->
   / setTimeout{f, 1000} where f{} = alert{"One second later..."}
 
   /
+    undefined where
+       var i = 3
+       intvl = setInterval{f, 1000} where f{} =
+          match i:
+             0 ->
+                $out.log{"Blast off!"}
+                clearInterval{intvl}
+             n ->
+                $out.log{i}
+                i -= 1
+
+  /
     [a*a + b*b] ** 0.5 where
        a = 3
        b = 4
 
-  Note that the bindings for /f, /a and /b are only valid in the
-  `where expression. `where always lets you shadow existing variables
-  and it even lets you shadow standard operators:
+  Note that the bindings for /f, /i, /intvl, /a and /b are only valid
+  in the respective `where expressions. `where always lets you shadow
+  existing variables and it even lets you shadow standard operators:
 
   / 8 + 12 where a + b = a - b
 
@@ -658,5 +716,53 @@ macros --> Macros -->
 
   * See /?hygiene for how macros interact with scope and how a macro
     can define variables for users.
+
+
+errors --> Error handling -->
+
+  == Error handling
+
+  The `throw and `try statements are used to throw exceptions and
+  handle them, respectively. Furthermore, in order to make errors more
+  unique, arbitrary new error "types" can be generated on the fly with
+  the `E macro.
+
+  / throw E.lemon{"so sour!"}
+
+  Multiple tags can be given to an error. As is usual, the first
+  argument is the message, but more arguments can be given:
+
+  / throw E.food.lemon{"so sour!", {pH = 2}}
+
+  The `try statement must contain a sequence of statements to execute
+  and then a sequence of _clauses to catch an error if it
+  happens. Clauses are tried in the order that they appear.
+
+  /
+    try:
+       throw E.food.lemon{"so sour!", {pH = 2}}
+       E.lemon? {arg} ->
+          "a lemon error occurred with pH = " + String{arg.pH}
+       E.food? e ->
+          "a food error occurred"
+
+  A generic clause can be used at the end to mop up any error. A
+  `finally statement will be executed at the end regardless of whether
+  an error occurs or not. If you think it looks better you can
+  optionally wrap the statements to `try in a `do block (to be fair,
+  you can _always wrap statements in a `do block):
+
+  /
+    try:
+       do:
+          null.x
+       ReferenceError? e ->
+          {"reference error", e}
+       TypeError? e ->
+          {"type error", e}
+       e ->
+          {"other error", e}
+       finally:
+          $out.log with "This will always be printed"
 
 

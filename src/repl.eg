@@ -334,6 +334,51 @@ class Repl:
          "Ctrl-E" = "goLineEnd"
          "Ctrl-K" = "killLine"
 
+         ;; smart parentheses
+         "'('"{cm} =
+            cur = cm.getCursor{}
+            tok = cm.getTokenAt{cur}
+            situation =
+               match tok.type:
+                  .string when tok.end > cur.ch ->
+                     .string
+                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                     .id
+                  .string ->
+                     .string
+                  .operator or .wordop or .open or .punctuation or === null ->
+                     .op
+                  else ->
+                     .id
+            match situation:
+               .string -> CodeMirror.Pass
+               .op -> @cm.replaceSelection{"["}
+               .id -> @cm.replaceSelection{"{"}
+
+         "')'"{cm} =
+            cur = cm.getCursor{}
+            tok = cm.getTokenAt{cur}
+            situation =
+               match tok.type:
+                  .string when tok.end > cur.ch ->
+                     .string
+                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                     .other
+                  .string ->
+                     .string
+                  else ->
+                     .other
+            match situation:
+               .string -> CodeMirror.Pass
+               else ->
+                  match tok.state.nest:
+                     {*, {match, *}} ->
+                        "{" -> @cm.replaceSelection{"}"}
+                        "[" -> @cm.replaceSelection{"]"}
+                        else -> CodeMirror.Pass
+                     else ->
+                        CodeMirror.Pass
+
       @cm.setOption{"mode", "earl-grey"}
       ;; @cm.setOption{"mode", "javascript"}
       @cm.setSize{.auto, .auto}
@@ -811,7 +856,7 @@ setup{} =
    window.$current = -1
    window.$libs = {=}
 
-   repl.eval with "
+   repl.eval with S[
 
       globals:
          __cards, alert, document
@@ -819,24 +864,25 @@ setup{} =
          __qengine, repl, __repl
          make_dom
          $io, $current, $libs
+         setInterval, clearInterval
 
       var _current = -1
 
       _next{} =
-         \"There is no tutorial yet.\"
+         "There is no tutorial yet."
 
       _help{match topic} =
          when __cards[topic] ->
             __cards[topic][1]{__repl, 0}
          else ->
-            \"Invalid help topic: \\\"\" + topic + \"\\\"\"
+            "Invalid help topic: \"" + topic + "\""
 
       macro next{_, _, form, _}:
          '[^form.env.mark{'_next}]{}
 
       macro help{_, _, form, match}:
          do: h = form.env.mark{'_help}
-         #void{} -> '[^h]{\"help\"}
+         #void{} -> '[^h]{"help"}
          topic -> '[^h]{^topic}
 
       macro Q{_, _, _, arg}:
@@ -846,7 +892,7 @@ setup{} =
          script = make_dom with script %
             async = true
             src = url
-            type = \"text/javascript\"
+            type = "text/javascript"
             onload = fn
          document.head.appendChild{script}
          undefined
@@ -860,19 +906,19 @@ setup{} =
                   if $libs[url]:
                      then:
                         $out.log with .note %
-                           \"\\\"\" + url + \"\\\" is already loaded.\"
+                           "\"" + url + "\" is already loaded."
                      else:
                         $libs[url] = true
                         __repl.lock{}
                         timer = setTimeout{f, 2000} where f{} =
                            $out.log with .warning %
-                                                                                                \"Loading \\\"\" + url + \"\\\" is taking more than 2 seconds.\"
-                              \"A green box will appear here once if/when it is loaded.\"
+                              "Loading \"" + url + "\" is taking more than 2 seconds."
+                              "A green box will appear here once if/when it is loaded."
                            __repl.unlock{}
                            $libs[url] = false
                         loader{url} with {} ->
                            $out.log with .success %
-                              \"Loaded \\\"\" + url + \"\\\"!\"
+                              "Loaded \"" + url + "\"!"
                            __repl.unlock{}
                            clearTimeout{timer}
                ]
@@ -885,7 +931,7 @@ setup{} =
             '$io[^=$current]
          expr ->
             '$io[^=$current][^expr]
-   "
+   ]
 
    ;; repl.process{"help main", false}
    ;; jQuery{"#input"}.focus{}
