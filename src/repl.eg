@@ -286,7 +286,7 @@ class Repl:
                   when state.mode !== .code
                        \ or state.nest.length > 1
                        \ or R"lowprio|op"? state.previous
-                       \ or [state.nest[0][1] > 0 and not R"^\s*$"? cm.getLine{e}] ->
+                       \ or [state.nest[0][2] > 0 and not R"^\s*$"? cm.getLine{e}] ->
                      CodeMirror.Pass
                   else ->
                      @submit{}

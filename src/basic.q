@@ -37,7 +37,7 @@ help --> Main help -->
   === Links
 
   * [Source code]::https://github.com/breuleux/earl-grey
-  * IRC: `[#earlgrey] on FreeNode
+  * IRC chat: `[#earlgrey] on FreeNode
 
 
 topics --> Selected topics -->
@@ -757,12 +757,12 @@ errors --> Error handling -->
        do:
           null.x
        ReferenceError? e ->
-          {"reference error", e}
+          {"reference error" = e}
        TypeError? e ->
-          {"type error", e}
+          {"type error" = e}
        e ->
-          {"other error", e}
+          {"other error" = e}
        finally:
-          $out.log with "This will always be printed"
+          $out.log with "This line will always be printed"
 
 
