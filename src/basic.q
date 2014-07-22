@@ -10,8 +10,8 @@ help --> Main help -->
 
   Why should you care? Good question!
 
-  * A quirky, terse /?syntax
-  * Advanced [pattern matching]/?patterns
+  * A quirky, terse /?syntax inspired from Python
+  * Advanced and deeply integrated [pattern matching]/?patterns
   * Arbitrary new features can be defined with /?macros
 
   === The REPL
@@ -29,8 +29,8 @@ help --> Main help -->
   executing them).
 
   Type /help to display this page again if you lose it. You can also
-  view the index here/?index or by typing /help.index, and a selected
-  list of /?topics (/help.topics).
+  view the /?index (/help.index), and a selected list of /?topics
+  (/help.topics).
 
   Or you can look at /?examples~!
 
@@ -169,6 +169,8 @@ syntax --> Syntax overview -->
          x + x
 
   _syntax_longmatch <-
+    Use /?match if there are many conditions to test.
+
     /
       match:
          when 1 == 0 -> false
@@ -178,8 +180,9 @@ syntax --> Syntax overview -->
 
   _syntax_longwhile <-
     /
-      i = 10
+      var i = 10
       while i > 0:
+         $out.log{i}
          i -= 1
 
   === Sugar rules
@@ -197,6 +200,7 @@ syntax --> Syntax overview -->
 
   === Overview
 
+  | __Comments         | / ;; this is a comment
   | /?strings and /?numbers | / "hello world" / .word / 12.34e56 / 16rDEADBEEF
   | /?arrays           | / {1, 2, 3} / {} / #word{4, 5}
   | /?objects          | / {a = 1, b = 2} / {"x" => 3} / {=}
@@ -212,7 +216,7 @@ syntax --> Syntax overview -->
   | __Conditionals     | /if{1 + 1 == 2, true, false} (expression form)
   |                    | {_syntax_longif1}
   |                    | {_syntax_longif2} (`then is implicit)
-  |                    | {_syntax_longmatch} (use /match if there are many conditions to test)
+  | /?match            | {_syntax_longmatch}
   | __[While loops]    | {_syntax_longwhile}
 
 
@@ -766,3 +770,37 @@ errors --> Error handling -->
           $out.log with "This line will always be printed"
 
 
+
+blocks --> Blocks and indent -->
+
+  == Blocks and indent
+
+  A __block is a sequence of statements or expressions. Blocks are
+  defined using square brackets `[[]]. Variables defined inside a
+  block are only valid in expressions within that block.
+
+  `[[]] is also used for __grouping. It only creates a block when it
+  encloses more than one expression, therefore /[[let x = 0]] and
+  /[let x = 0] behave the same with respect to scoping, whereas
+  /[[let x = 80, x]] only makes `x visible in the inner scope (the
+  REPL strips the brackets, though, so you must test inside a
+  function).
+
+  An indented block is completely equivalent to wrapping it in
+  `[[]]~s. For instance these two blocks are the same:
+
+  one <-
+    /
+      if 1 < 0: [
+         "Math is broken :("
+      ]
+
+  two <-
+    /
+       if 1 < 0:
+         "Math is broken :("
+
+  | {one} | {two}
+
+  Line breaks are always equivalent to commas except for when the line
+  that follows continuates it (denoted with a leading backslash).

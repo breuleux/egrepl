@@ -1,6 +1,5 @@
 
 require:
-   "./kb" as kb
    "earl-grey" as eg
    "earl-grey/lib/util" ->
       GenSym
@@ -18,14 +17,13 @@ require:
    "./javascript"
 
 provide:
-   Repl, kb.Interactor as Interactor
+   Repl
    parse, tokenize, eg.Source as Source
    setup
 
 globals:
    document, window, alert, jQuery, setTimeout
    Element
-   ;; CodeMirror
 
 gensym = GenSym{"io_"}
 
@@ -667,7 +665,6 @@ card_displayer{topic, description, text}{repl, tab} =
 __cards =
    raw = acquire_cards with
       "basic.q"
-      "cards.q"
       "examples.q"
       "advanced.q"
    Q = quaint.Engine{quaint.dispatch}
