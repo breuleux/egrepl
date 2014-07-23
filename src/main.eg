@@ -1,8 +1,6 @@
 
 require:
    "earl-grey" as eg
-   "earl-grey/lib/util" ->
-      GenSym
    "earl-grey/lib/location" ->
       Location, highlight_locations
       format_error
@@ -14,6 +12,14 @@ require:
    codemirror as CodeMirror
    "codemirror/addon/runmode/runmode"
    "./earlmode"
+   "./repl" ->
+      Repl, Nav
+   "./util" ->
+      DOM, repr
+   "./doc" ->
+      card_displayer as __card_displayer
+      __insert_doc
+
 
 provide:
    Repl
@@ -24,361 +30,54 @@ globals:
    document, window, alert, jQuery, setTimeout
    Element
 
-gensym = GenSym{"io_"}
+macros:
+   require: "./doc" -> acquire_cards
+   {acquire_cards = acquire_cards}
 
 
-tag_namespaces = {=}
-[{...} each tag -> tag_namespaces[tag] = "http://www.w3.org/2000/svg"] with
-   .svg
-   .circle, .line, .path, .rect, .text
+__cards = {=}
+card_displayer = __card_displayer{__cards}
 
+do:
+   raw = acquire_cards with
+      "basic.q"
+      "examples.q"
+      "advanced.q"
+   Q = quaint.Engine{quaint.dispatch}
+   __cards &: object with raw each {topic, description, text} ->
+      qdesc = Q.run{description}
+      {topic, {qdesc, card_displayer{topic, description, text}}}
 
-DOM{match, default_tag = "div"} =
-
-   String? s ->
-      document.createTextNode{s}
-
-   Element? e ->
-      e
-
-   Array? args ->
-      node = document.createElement{"span"}
-      args each arg ->
-         node.appendChild{DOM{arg, default_tag}}
-      node
-
-   Node? {=> tags, => props, => children} ->
-      var tag = default_tag
-      classes = {}
-      tags each
-         R"^\.(.*)"! {_, name} ->
-            classes.push{name}
-         other ->
-            tag = other
-
-      node = match tag_namespaces[tag]:
-         undefined? ->
-            document.createElement{tag}
-         ns ->
-            document.createElementNS{ns, tag}
-            
-      if classes.length:
-         node.className = classes.join{" "}
-      items{props} each {match k, v} ->
-         R"^on"? ->
-            node[k] = v
-         else ->
-            node.setAttribute{k, v}
-
-      match tag:
-         .raw ->
-            tag = .span
-            match children:
-               {String? s} ->
-                  node.innerHTML = s
-         other ->
-            children each c ->
-               node.appendChild{DOM{c, default_tag}}
-
-      node
-
-   other ->
-      DOM{String! other}
-
-mktable{x, recur = repr} =
-   its = match x:
-      Array? -> x
-      other -> items{x}
-   if its.length:
-      then:
-         table.object %
-            its each {k, v} ->
-               tr %
-                  th % recur{k, repr}
-                  td % recur{v, repr}
-      else:
-         .object.empty %
-
-repr{match x, Function? recur = repr} =
-   === true -> .special.true % "true"
-   === false -> .special.false % "false"
-   null? -> .special.nil % "null"
-   undefined? -> .special.nil % "undefined"
-   Number? -> .num % String{x}
-   "" -> .str.empty %
-   String? -> .str % x
-   Array? {} -> .sequence.empty %
-   Array? entries ->
-      .sequence % [entries each x -> recur{x, repr}]
-   Node? n ->
-      n
-   when x["::repr"] ->
-      x["::repr"]{recur}
-   when Object.getPrototypeOf{x} === Object.prototype ->
-      mktable{x}
-   when x.constructor and x.constructor["::egclass"] ->
-      .instance %
-         .classname % x.constructor["::name"]
-         mktable{x}
-   when x["::egclass"] ->
-      .class %
-         .classname % "Class " + x["::name"]
-         mktable{x.prototype}
-   Function? f ->
-      .function % if{f.name, f.name, "<anonymous>"}
-   other ->
-      .unknown % other.toString{}
-
-Error.prototype["::repr"] = {} ->
-   format_error{this}
-
-dom_node_clear{x} =
-   while x.children.length > 0:
-      x.removeChild{x.children[0]}
-
-
-class Outputter:
-
-   constructor{@elem} =
-      pass
-
-   log{*data} =
-      @elem.appendChild with
-         DOM with div %
-            data each match x ->
-               Element? or Node? -> x
-               else -> .eg % repr{x}
+   __cards.index = {"Index"} with {repl, tab} ->
+      repl.nav.insert_page{tab, -1, .index} with
+         .card % .blocks %
+            h2 % .Index
+            table %
+               items{__cards}.sort{} each {topic, {desc, f}} ->
+                  tr %
+                     td % __insert_doc{__cards, repl, tab, topic}
+                     td % desc
       undefined
 
 
-class Nav:
-
-   constructor{@pane} =
-      @tabs = {}
-
-   make_history_label{tab, pos, label, cls} =
-      ^["." + cls] %
-         label
-         onclick{e} =
-            @render_tab{tab, pos}
-
-   gettab{match tab} =
-      do:
-         create{} =
-            pages = {}
-            box = DOM with
-               div.tab %
-                  div.tab_header %
-                     div.breadcrumbs %
-                     div.close_tab %
-                        onclick{e} =
-                           @tabs[tab] = null
-                           dom_node_clear with
-                              @pane.children[tab]
-                  div % [div %]
-            data = {pages, box.children[0].children[0], box.children[1], -1}
-            {box, data}
-
-      when @tabs[tab] ->
-         @tabs[tab]
-
-      when @tabs[tab] === null ->
-         {box, data} = create{}
-         @tabs[tab] = data
-         @pane.replaceChild with
-            box
-            @pane.children[tab]
-         data
-
-      when tab == @tabs.length ->
-         {box, data} = create{}
-         @tabs.push with data
-         @pane.appendChild with box
-         data
-
-      else ->
-         throw E.repl.no_such_tab{tab}
-
-   insert_page{tab, var pos, label, page} =
-      {pages, ltarget, ptarget, current} = @gettab{tab}
-      if pos == -1:
-         pos = current + 1 ;;pages.length
-      pages.splice{pos}
-      pages.push with {label, page}
-      @render_tab{tab, pos}
-
-   render_tab{tab, pos} =
-      {pages, ltarget, ptarget, _} = @tabs[tab]
-      @tabs[tab][3] = pos
-      mkh{pos, label, cls} = @make_history_label{tab, pos, label, cls}
-      dom_node_clear{ltarget}
-      enumerate{pages} each {i, {name, page}} ->
-         ltarget.appendChild with DOM with
-            match i:
-               < pos  -> mkh{i, name, .previous_page}
-               == pos -> mkh{i, name, .current_page}
-               > pos  -> mkh{i, name, .next_page}
-         if i < pages.length - 1:
-            ltarget.appendChild with DOM with span.history_separator %
-      {_, page} = pages[pos]
-      ptarget.replaceChild{..., ptarget.children[0]} with DOM with page
-
-   focus_tab{tab} =
-      @pane.children[tab].scrollIntoView{true}
 
 
-class Repl:
+setup{} =
 
-   constructor{@box, @target, @inputbox, @textarea, @evaluator, @nav} =
-      @url = "<repl>"
-      @gen = eg.Generator{true}
-      @setup_cm{@textarea}
-      @cursor = 0
-      @history = {""}
-      ;; @tabs = {}
+   gen = eg.Generator{true}
 
-   ;; make_history_label{tab, pos, label, cls} =
-   ;;    ^["." + cls] %
-   ;;       label
-   ;;       onclick{e} =
-   ;;          @render_tab{tab, pos}
+   __eval = eval
 
-   ;; gettab{match tab} =
-   ;;    do:
-   ;;       create{} =
-   ;;          pages = {}
-   ;;          box = DOM with
-   ;;             div.tab %
-   ;;                div.tab_header %
-   ;;                   div.breadcrumbs %
-   ;;                   div.close_tab %
-   ;;                      onclick{e} =
-   ;;                         @tabs[tab] = null
-   ;;                         dom_node_clear with
-   ;;                            @target2.children[tab]
-   ;;                div % [div %]
-   ;;          data = {pages, box.children[0].children[0], box.children[1], -1}
-   ;;          {box, data}
-
-   ;;    when @tabs[tab] ->
-   ;;       @tabs[tab]
-
-   ;;    when @tabs[tab] === null ->
-   ;;       {box, data} = create{}
-   ;;       @tabs[tab] = data
-   ;;       @target2.replaceChild with
-   ;;          box
-   ;;          @target2.children[tab]
-   ;;       data
-
-   ;;    when tab == @tabs.length ->
-   ;;       {box, data} = create{}
-   ;;       @tabs.push with data
-   ;;       @target2.appendChild with box
-   ;;       data
-
-   ;;    else ->
-   ;;       throw E.repl.no_such_tab{tab}
-
-   ;; insert_page{tab, var pos, label, page} =
-   ;;    {pages, ltarget, ptarget, current} = @gettab{tab}
-   ;;    if pos == -1:
-   ;;       pos = current + 1 ;;pages.length
-   ;;    pages.splice{pos}
-   ;;    pages.push with {label, page}
-   ;;    @render_tab{tab, pos}
-
-   ;; render_tab{tab, pos} =
-   ;;    {pages, ltarget, ptarget, _} = @tabs[tab]
-   ;;    @tabs[tab][3] = pos
-   ;;    mkh{pos, label, cls} = @make_history_label{tab, pos, label, cls}
-   ;;    dom_node_clear{ltarget}
-   ;;    enumerate{pages} each {i, {name, page}} ->
-   ;;       ltarget.appendChild with DOM with
-   ;;          match i:
-   ;;             < pos  -> mkh{i, name, .previous_page}
-   ;;             == pos -> mkh{i, name, .current_page}
-   ;;             > pos  -> mkh{i, name, .next_page}
-   ;;       if i < pages.length - 1:
-   ;;          ltarget.appendChild with DOM with span.history_separator %
-   ;;    {_, page} = pages[pos]
-   ;;    ptarget.replaceChild{..., ptarget.children[0]} with DOM with page
-
-   ;; focus_tab{tab} =
-   ;;    @target2.children[tab].scrollIntoView{true}
-
-   setup_cm{textarea} =
-
-      @cm = CodeMirror.fromTextArea with
-         textarea
-         {
-            indentUnit = 3
-            viewportMargin = 1/0
-            theme = .repl
-            ;; lineNumbers = true
-         }
-
-      @cm.addKeyMap{{...}} with
-
-         Enter{match cm} =
-            do:
-               e = cm.lineCount{} - 1
-            when cm.getCursor{}.line < e ->
-               CodeMirror.Pass
-            else ->
-               state = cm.getStateAfter{e}
-               match:
-                  when state.mode !== .code
-                       \ or state.nest.length > 1
-                       \ or R"lowprio|op"? state.previous
-                       \ or [state.nest[0][2] > 0 and not R"^\s*$"? cm.getLine{e}] ->
-                     CodeMirror.Pass
-                  else ->
-                     @submit{}
-
-         "Shift-Enter" = "newlineAndIndent"
-
-         "Ctrl-Enter"{cm} =
-            @submit{}
-
-         "Ctrl-Up"{cm} =
-            if [@cursor > 0]:
-               @cm.setValue with @history[-- @cursor]
-               @cm.setCursor{@cm.lineCount{}, 0}
-               @sink{}
-
-         "Ctrl-Down"{cm} =
-            if [@cursor < @history.length - 1]:
-               @cm.setValue with @history[++ @cursor]
-               @cm.setCursor{0, @cm.getLine{0}.length}
-               @sink{}
-
-         Up{match cm} =
-            when @cursor > 0 and @cm.getCursor{}.line === 0 ->
-               @cm.setValue with @history[-- @cursor]
-               @cm.setCursor{@cm.lineCount{}, 0}
-               @sink{}
-            else ->
-               CodeMirror.Pass
-
-         Down{match cm} =
-            when [@cursor < @history.length - 1 and
-                  \ @cm.getCursor{}.line === [@cm.lineCount{} - 1]] ->
-               @cm.setValue with @history[++ @cursor]
-               @cm.setCursor{0, @cm.getLine{0}.length}
-               @sink{}
-            else ->
-               CodeMirror.Pass
-
-         Tab = "indentAuto"
-
-         "Ctrl-L"{_} =
-            jQuery{@target}.empty{}
-
-         "Ctrl-A" = "goLineStart"
-         "Ctrl-E" = "goLineEnd"
-         "Ctrl-K" = "killLine"
-
+   repl = Repl with
+      document.getElementById{"box"}
+      document.getElementById{"interactive"}
+      document.getElementById{"code"}
+      {text} ->
+         try:
+            g = gen.generate{eg.Source{text, "<repl>"}}
+            #success{__eval{g}}
+            e -> #failure{e}
+      {...} with
          ;; smart parentheses
          "'('"{cm} =
             cur = cm.getCursor{}
@@ -397,8 +96,8 @@ class Repl:
                      .id
             match situation:
                .string -> CodeMirror.Pass
-               .op -> @cm.replaceSelection{"["}
-               .id -> @cm.replaceSelection{"{"}
+               .op -> cm.replaceSelection{"["}
+               .id -> cm.replaceSelection{"{"}
 
          "')'"{cm} =
             cur = cm.getCursor{}
@@ -418,307 +117,14 @@ class Repl:
                else ->
                   match tok.state.nest:
                      {*, {match, *}} ->
-                        "{" -> @cm.replaceSelection{"}"}
-                        "[" -> @cm.replaceSelection{"]"}
+                        "{" -> cm.replaceSelection{"}"}
+                        "[" -> cm.replaceSelection{"]"}
                         else -> CodeMirror.Pass
                      else ->
                         CodeMirror.Pass
 
-      @cm.setOption{"mode", "earl-grey"}
-      @cm.setSize{.auto, .auto}
 
-   sink{} =
-      setTimeout{..., 0} with {} ->
-         jQuery{@box}.scrollTop{@box.scrollHeight}
-
-   add_to_history{text} =
-      hl = @history.length
-      if [text !== "" and not [hl > 1 and @history[hl - 2] == text]]:
-         ;; Only add to history if the command was nonempty
-         ;; and we're not repeating the same command
-         @history[hl - 1] = text
-         @history.push{""}
-      @cursor = @history.length - 1
-
-   submit{} =
-      text = @cm.getValue{}
-      @cm.setValue{""}
-      @process_all{text, true, true}
-
-   generate{text} =
-      @gen.generate{eg.Source{text, @url}}
-
-   eval{text} =
-      [gen{} !! e -> handle{e}] where
-         gen{} =
-            ;; g = "(function($out){return (" + @generate{text} + ")})(3411)"
-            g = @generate{text}
-            #success{@evaluator{g}}
-         handle{e} =
-            #failure{e}
-
-   highlight{text} =
-      hl = {}
-      CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
-         hl.push with
-            if style:
-               then: span ^[".cm-" + style] % text
-               else: span % text
-      ".cm-s-repl" %
-         hl
-
-   lock{} =
-      @__waiting = true
-   unlock{} =
-      @__waiting = false
-
-   process_all{text, display_in = true, sink = false} =
-      text.split{"\n===\n"} each part ->
-         @process{part, display_in, sink}
-
-   process{text, display_in = true, sink = false} =
-
-      obox = DOM with div %
-      name = gensym{}
-      obox.id = name
-
-      window.$current += 1
-      window.$io.push with Outputter{obox}
-
-      if display_in:
-         @add_to_history{text}
-
-      node1 = DOM with
-         if display_in:
-            then:
-               .[in] %
-                  .inbanner %
-                  .entry % @highlight{text}
-            else:
-               ""
-
-      @target.appendChild{node1}
-      @target.appendChild{obox}
-
-      remainder{} where remainder{} =
-         if [@__waiting]:
-            setTimeout{remainder, 10}
-            return
-
-         node2 =
-            match @eval{text}:
-               when text.trim{} === "" ->
-                  ""
-               #success{undefined?} ->
-                  ""
-               #success{Node? n} ->
-                  n
-               #success{value} ->
-                  .out %
-                     .outbanner %
-                     .result % .eg % repr{value}
-               #failure{error} ->
-                  .err %
-                     .errbanner %
-                     .result % .eg % repr{error}
-
-         obox.appendChild with DOM{node2}
-         if sink:
-            @sink{}
-
-         collapse{e} =
-            e.stopPropagation{}
-            at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
-            jQuery{this}.toggleClass{"collapsed"}
-            if at_top:
-               jQuery{@box}.scrollTop{@box.scrollHeight}
-
-         on{sel} =
-            jQuery{"#" + name + " " + sel}
-
-         on{".sequence"}.addClass{"complex"}
-         on{".object"}.addClass{"complex"}
-      
-         on{".complex"}.click{collapse}
-         on{".complex .complex .complex"}.addClass{.collapsed}
-
-         on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
-         on{".traceback"}.addClass{.collapsed}.click{collapse}
-
-
-
-macro acquire_cards{*, #data{*filenames}}:
-
-   globals: __dirname
-
-   dirname = __dirname
-   require: [fs, quaint]
-
-   results = #data{}
-   dispatch = quaint.dispatch.clone{}
-   components = {...} with
-
-      "topic --> contents"{engine, node, {=> topic, => contents}} =
-         results.push with #data with
-            #value{topic.location.text{}}
-            #value{""}
-            #value{contents.location.text{}}
-
-      "topic --> desc --> contents"{engine, node, {=> topic, => desc, => contents}} =
-         results.push with #data with
-            #value{topic.location.text{}}
-            #value{desc.location.text{}}
-            #value{contents.location.text{}}
-
-   items{components} each {spec, fn} ->
-      dispatch.register with quaint.Spec{spec, fn}
-
-   Q = quaint.Engine{dispatch}
-
-   filenames each #value{filename} ->
-      f = dirname + "/" + filename
-      contents = fs.readFileSync{f, .utf8}
-      Q.run{contents}
-
-   ;; quaint mucks this up for some reason
-   set __dirname = dirname
-
-   results
-
-
-__clickable{repl, code, text = null} =
-   .clickable %
-      onclick{e and {shiftKey => match}} =
-         do: e.preventDefault{}
-         true? ->
-            repl.cm.setValue{code}
-            repl.cm.focus{}
-         else ->
-            repl.process_all{code, true, true}
-            repl.cm.focus{}
-      text or repl.highlight{code}
-
-__insert_doc{repl, tab, topic, text = null} =
-   .help %
-      onclick{e} =
-         e.preventDefault{}
-         data = __cards[topic]
-         match e.which:
-            when not data ->
-               card_displayer{"error", "Error", ...}{repl, tab} with
-                  "__ERROR: There is no documentation for `\"" + topic + "\""
-            1 ->
-               data[1]{repl, tab}
-               repl.nav.focus_tab{tab}
-            2 ->
-               data[1]{repl, repl.tabs.length}
-      text or topic
-
-
-card_displayer{topic, description, text}{repl, tab} =
-
-   clickable{code, text = null} =
-      __clickable{repl, code, text}
-
-   insert_doc{topic, text = null} =
-      __insert_doc{repl, tab, topic, text}
-
-   make_row{items} =
-      span %
-         items each
-            first item ->
-               item
-            item ->
-               span % [span.separator % "", item]
-
-   getcode{node} =
-      code = shed{node}.location.text{}
-      lines = code.split{"\n"}
-      while [R"^ *$"? lines[0]]:
-         lines.shift{}
-      while [R"^ *$"? lines[lines.length - 1]]:
-         lines.pop{}
-      R"( *)(.*)"! {_, indent, line0} = lines[0]
-      nindent = indent.length
-      xs.join{"\n"} where
-         xs = {line0} ++
-            lines.slice{1} each line ->
-               line.slice{nindent}
-
-   shed{node} =
-      chain node:
-         quaint.shed{@}
-
-
-   dispatch = quaint.dispatch.clone{}
-   components = {...} with
-
-      "maybe label / code"{engine, node, {label => match, => code}} =
-         #text{""} ->
-            match quaint.collapse{"/", code}:
-               {x} -> clickable{getcode{x}}
-               {*xs} -> make_row with
-                  xs each x -> clickable{getcode{x}, null}
-         label ->
-            clickable with
-               getcode{code}
-               engine.run{label}
-
-      "maybe label /? topic"{engine, node, {label => match, => topic}} =
-         #text{""} ->
-            match quaint.collapse{"/", topic}:
-               {x} -> insert_doc{shed{x}.location.text{}}
-               {*xs} -> make_row with
-                  xs each x -> insert_doc{shed{x}.location.text{}}
-         label ->
-            insert_doc with
-               shed{topic}.location.text{}
-               shed{label}.location.text{}
-
-   items{components} each {spec, fn} ->
-      dispatch.register with quaint.Spec{spec, fn}
-
-   Q = quaint.Engine{dispatch}
-
-   repl.nav.insert_page{tab, -1, topic, .card % Q.run{text}}
-   undefined
-
-
-__cards =
-   raw = acquire_cards with
-      "basic.q"
-      "examples.q"
-      "advanced.q"
-   Q = quaint.Engine{quaint.dispatch}
-   rval = object with raw each {topic, description, text} ->
-      qdesc = Q.run{description}
-      {topic, {qdesc, card_displayer{topic, description, text}}}
-
-   rval.index = {"Index"} with {repl, tab} ->
-      repl.nav.insert_page{tab, -1, .index} with
-         .card % .blocks %
-            h2 % .Index
-            table %
-               items{rval}.sort{} each {topic, {desc, f}} ->
-                  tr %
-                     td % __insert_doc{repl, tab, topic}
-                     td % desc
-      undefined
-
-   rval
-
-
-
-
-setup{} =
-
-   repl = Repl with
-      document.getElementById{"box"}
-      document.getElementById{"interactive"}
-      document.getElementById{"inputbox"}
-      document.getElementById{"code"}
-      eval
-      Nav{document.getElementById{"help"}}
+   repl.nav = Nav{document.getElementById{"help"}}
 
    ;; {window._cards, engine} = make_cards{repl}
 
@@ -731,6 +137,7 @@ setup{} =
    window.$io = {}
    window.$current = -1
    window.$libs = {=}
+   window.__eval = __eval
 
    repl.eval with S[
 
