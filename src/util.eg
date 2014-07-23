@@ -1,0 +1,118 @@
+
+
+provide:
+   DOM, dom_node_clear, mktable, repr
+
+globals:
+   document, window, alert, jQuery, setTimeout
+   Element
+
+
+tag_namespaces = {=}
+[{...} each tag -> tag_namespaces[tag] = "http://www.w3.org/2000/svg"] with
+   .svg
+   .circle, .line, .path, .rect, .text
+
+
+DOM{match, default_tag = "div"} =
+
+   String? s ->
+      document.createTextNode{s}
+
+   Element? e ->
+      e
+
+   Array? args ->
+      node = document.createElement{"span"}
+      args each arg ->
+         node.appendChild{DOM{arg, default_tag}}
+      node
+
+   Node? {=> tags, => props, => children} ->
+      var tag = default_tag
+      classes = {}
+      tags each
+         R"^\.(.*)"! {_, name} ->
+            classes.push{name}
+         other ->
+            tag = other
+
+      node = match tag_namespaces[tag]:
+         undefined? ->
+            document.createElement{tag}
+         ns ->
+            document.createElementNS{ns, tag}
+            
+      if classes.length:
+         node.className = classes.join{" "}
+      items{props} each {match k, v} ->
+         R"^on"? ->
+            node[k] = v
+         else ->
+            node.setAttribute{k, v}
+
+      match tag:
+         .raw ->
+            tag = .span
+            match children:
+               {String? s} ->
+                  node.innerHTML = s
+         other ->
+            children each c ->
+               node.appendChild{DOM{c, default_tag}}
+
+      node
+
+   other ->
+      DOM{String! other}
+
+
+mktable{x, recur = repr} =
+   its = match x:
+      Array? -> x
+      other -> items{x}
+   if its.length:
+      then:
+         table.object %
+            its each {k, v} ->
+               tr %
+                  th % recur{k, repr}
+                  td % recur{v, repr}
+      else:
+         .object.empty %
+
+
+repr{match x, Function? recur = repr} =
+   === true -> .special.true % "true"
+   === false -> .special.false % "false"
+   null? -> .special.nil % "null"
+   undefined? -> .special.nil % "undefined"
+   Number? -> .num % String{x}
+   "" -> .str.empty %
+   String? -> .str % x
+   Array? {} -> .sequence.empty %
+   Array? entries ->
+      .sequence % [entries each x -> recur{x, repr}]
+   Node? n ->
+      n
+   when x["::repr"] ->
+      x["::repr"]{recur}
+   when Object.getPrototypeOf{x} === Object.prototype ->
+      mktable{x}
+   when x.constructor and x.constructor["::egclass"] ->
+      .instance %
+         .classname % x.constructor["::name"]
+         mktable{x}
+   when x["::egclass"] ->
+      .class %
+         .classname % "Class " + x["::name"]
+         mktable{x.prototype}
+   Function? f ->
+      .function % if{f.name, f.name, "<anonymous>"}
+   other ->
+      .unknown % other.toString{}
+
+
+dom_node_clear{x} =
+   while x.children.length > 0:
+      x.removeChild{x.children[0]}

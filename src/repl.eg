@@ -1,0 +1,306 @@
+
+require:
+   "earl-grey" as eg
+   "earl-grey/lib/util" ->
+      GenSym
+   "earl-grey/lib/location" ->
+      format_error
+   codemirror as CodeMirror
+   "codemirror/addon/runmode/runmode"
+   "./earlmode"
+   "./util" ->
+      DOM, dom_node_clear, mktable, repr
+
+provide:
+   Outputter, Nav, Repl, repr
+
+globals:
+   document, window, alert, jQuery, setTimeout
+   Element
+
+
+gensym = GenSym{"io_"}
+
+
+Error.prototype["::repr"] = {} ->
+   format_error{this}
+
+
+class Nav:
+
+   constructor{@pane} =
+      @tabs = {}
+
+   make_history_label{tab, pos, label, cls} =
+      ^["." + cls] %
+         label
+         onclick{e} =
+            @render_tab{tab, pos}
+
+   gettab{match tab} =
+      do:
+         create{} =
+            pages = {}
+            box = DOM with
+               div.tab %
+                  div.tab_header %
+                     div.breadcrumbs %
+                     div.close_tab %
+                        onclick{e} =
+                           @tabs[tab] = null
+                           dom_node_clear with
+                              @pane.children[tab]
+                  div % [div %]
+            data = {pages, box.children[0].children[0], box.children[1], -1}
+            {box, data}
+
+      when @tabs[tab] ->
+         @tabs[tab]
+
+      when @tabs[tab] === null ->
+         {box, data} = create{}
+         @tabs[tab] = data
+         @pane.replaceChild with
+            box
+            @pane.children[tab]
+         data
+
+      when tab == @tabs.length ->
+         {box, data} = create{}
+         @tabs.push with data
+         @pane.appendChild with box
+         data
+
+      else ->
+         throw E.repl.no_such_tab{tab}
+
+   insert_page{tab, var pos, label, page} =
+      {pages, ltarget, ptarget, current} = @gettab{tab}
+      if pos == -1:
+         pos = current + 1 ;;pages.length
+      pages.splice{pos}
+      pages.push with {label, page}
+      @render_tab{tab, pos}
+
+   render_tab{tab, pos} =
+      {pages, ltarget, ptarget, _} = @tabs[tab]
+      @tabs[tab][3] = pos
+      mkh{pos, label, cls} = @make_history_label{tab, pos, label, cls}
+      dom_node_clear{ltarget}
+      enumerate{pages} each {i, {name, page}} ->
+         ltarget.appendChild with DOM with
+            match i:
+               < pos  -> mkh{i, name, .previous_page}
+               == pos -> mkh{i, name, .current_page}
+               > pos  -> mkh{i, name, .next_page}
+         if i < pages.length - 1:
+            ltarget.appendChild with DOM with span.history_separator %
+      {_, page} = pages[pos]
+      ptarget.replaceChild{..., ptarget.children[0]} with DOM with page
+
+   focus_tab{tab} =
+      @pane.children[tab].scrollIntoView{true}
+
+
+class Outputter:
+
+   constructor{@elem} =
+      pass
+
+   log{*data} =
+      @elem.appendChild with
+         DOM with div %
+            data each match x ->
+               Element? or Node? -> x
+               else -> .eg % repr{x}
+      undefined
+
+
+class Repl:
+
+   constructor{@box, @target, @textarea, @eval, @keymap} =
+      @setup_cm{@textarea}
+      @cursor = 0
+      @history = {""}
+
+   setup_cm{textarea} =
+
+      @cm = CodeMirror.fromTextArea with
+         textarea
+         {
+            indentUnit = 3
+            viewportMargin = 1/0
+            theme = .repl
+            ;; lineNumbers = true
+         }
+
+      @cm.addKeyMap{{...} & @keymap} with
+
+         Enter{match cm} =
+            do:
+               e = cm.lineCount{} - 1
+            when cm.getCursor{}.line < e ->
+               CodeMirror.Pass
+            else ->
+               state = cm.getStateAfter{e}
+               match:
+                  when state.mode !== .code
+                       \ or state.nest.length > 1
+                       \ or R"lowprio|op"? state.previous
+                       \ or [state.nest[0][2] > 0 and not R"^\s*$"? cm.getLine{e}] ->
+                     CodeMirror.Pass
+                  else ->
+                     @submit{}
+
+         "Shift-Enter" = "newlineAndIndent"
+
+         "Ctrl-Enter"{cm} =
+            @submit{}
+
+         "Ctrl-Up"{cm} =
+            if [@cursor > 0]:
+               @cm.setValue with @history[-- @cursor]
+               @cm.setCursor{@cm.lineCount{}, 0}
+               @sink{}
+
+         "Ctrl-Down"{cm} =
+            if [@cursor < @history.length - 1]:
+               @cm.setValue with @history[++ @cursor]
+               @cm.setCursor{0, @cm.getLine{0}.length}
+               @sink{}
+
+         Up{match cm} =
+            when @cursor > 0 and @cm.getCursor{}.line === 0 ->
+               @cm.setValue with @history[-- @cursor]
+               @cm.setCursor{@cm.lineCount{}, 0}
+               @sink{}
+            else ->
+               CodeMirror.Pass
+
+         Down{match cm} =
+            when [@cursor < @history.length - 1 and
+                  \ @cm.getCursor{}.line === [@cm.lineCount{} - 1]] ->
+               @cm.setValue with @history[++ @cursor]
+               @cm.setCursor{0, @cm.getLine{0}.length}
+               @sink{}
+            else ->
+               CodeMirror.Pass
+
+         Tab = "indentAuto"
+
+         "Ctrl-L"{_} =
+            jQuery{@target}.empty{}
+
+         "Ctrl-A" = "goLineStart"
+         "Ctrl-E" = "goLineEnd"
+         "Ctrl-K" = "killLine"
+
+      @cm.setOption{"mode", "earl-grey"}
+      @cm.setSize{.auto, .auto}
+
+   sink{} =
+      setTimeout{..., 0} with {} ->
+         jQuery{@box}.scrollTop{@box.scrollHeight}
+
+   add_to_history{text} =
+      hl = @history.length
+      if [text !== "" and not [hl > 1 and @history[hl - 2] == text]]:
+         ;; Only add to history if the command was nonempty
+         ;; and we're not repeating the same command
+         @history[hl - 1] = text
+         @history.push{""}
+      @cursor = @history.length - 1
+
+   submit{} =
+      text = @cm.getValue{}
+      @cm.setValue{""}
+      @process_all{text, true, true}
+
+   highlight{text} =
+      hl = {}
+      CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
+         hl.push with
+            if style:
+               then: span ^[".cm-" + style] % text
+               else: span % text
+      ".cm-s-repl" %
+         hl
+
+   lock{} =
+      @__waiting = true
+   unlock{} =
+      @__waiting = false
+
+   process_all{text, display_in = true, sink = false} =
+      text.split{"\n===\n"} each part ->
+         @process{part, display_in, sink}
+
+   process{text, display_in = true, sink = false} =
+
+      obox = DOM with div %
+      name = gensym{}
+      obox.id = name
+
+      window.$current += 1
+      window.$io.push with Outputter{obox}
+
+      if display_in:
+         @add_to_history{text}
+
+      node1 = DOM with
+         if display_in:
+            then:
+               .[in] %
+                  .inbanner %
+                  .entry % @highlight{text}
+            else:
+               ""
+
+      @target.appendChild{node1}
+      @target.appendChild{obox}
+
+      remainder{} where remainder{} =
+         if [@__waiting]:
+            setTimeout{remainder, 10}
+            return
+
+         node2 =
+            match @eval{text}:
+               when text.trim{} === "" ->
+                  ""
+               #success{undefined?} ->
+                  ""
+               #success{Node? n} ->
+                  n
+               #success{value} ->
+                  .out %
+                     .outbanner %
+                     .result % .eg % repr{value}
+               #failure{error} ->
+                  .err %
+                     .errbanner %
+                     .result % .eg % repr{error}
+
+         obox.appendChild with DOM{node2}
+         if sink:
+            @sink{}
+
+         collapse{e} =
+            e.stopPropagation{}
+            at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
+            jQuery{this}.toggleClass{"collapsed"}
+            if at_top:
+               jQuery{@box}.scrollTop{@box.scrollHeight}
+
+         on{sel} =
+            jQuery{"#" + name + " " + sel}
+
+         on{".sequence"}.addClass{"complex"}
+         on{".object"}.addClass{"complex"}
+      
+         on{".complex"}.click{collapse}
+         on{".complex .complex .complex"}.addClass{.collapsed}
+
+         on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
+         on{".traceback"}.addClass{.collapsed}.click{collapse}
+
