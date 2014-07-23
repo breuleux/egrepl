@@ -68,7 +68,7 @@ examples --> List of examples -->
                          border = "1px solid black", padding = "10px"
                          overflow = .auto}
                 dangerouslySetInnerHTML = {
-                   __html = make_dom{Q this.state.text}.innerHTML
+                   __html = DOM{Q this.state.text}.innerHTML
                 }
     ===
     $out.elem.style.height = "500px"
@@ -77,7 +77,6 @@ examples --> List of examples -->
     pane. It is a _bit like `Markdown.
 
     .note ..
-      * It is still a bit primitive
       * You can [__ embed expressions]:
         6 * 6 = {6 * 6}
 
