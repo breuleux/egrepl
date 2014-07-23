@@ -17,8 +17,9 @@ require:
    "./util" ->
       DOM, repr
    "./doc" ->
-      card_displayer as __card_displayer
-      __insert_doc
+      Cards
+      ;; card_displayer as __card_displayer
+      ;; __insert_doc
 
 
 provide:
@@ -35,30 +36,10 @@ macros:
    {acquire_cards = acquire_cards}
 
 
-__cards = {=}
-card_displayer = __card_displayer{__cards}
-
-do:
-   raw = acquire_cards with
-      "basic.q"
-      "examples.q"
-      "advanced.q"
-   Q = quaint.Engine{quaint.dispatch}
-   __cards &: object with raw each {topic, description, text} ->
-      qdesc = Q.run{description}
-      {topic, {qdesc, card_displayer{topic, description, text}}}
-
-   __cards.index = {"Index"} with {repl, tab} ->
-      repl.nav.insert_page{tab, -1, .index} with
-         .card % .blocks %
-            h2 % .Index
-            table %
-               items{__cards}.sort{} each {topic, {desc, f}} ->
-                  tr %
-                     td % __insert_doc{__cards, repl, tab, topic}
-                     td % desc
-      undefined
-
+__raw_cards = acquire_cards with
+   "basic.q"
+   "examples.q"
+   "advanced.q"
 
 
 
@@ -126,12 +107,18 @@ setup{} =
 
    repl.nav = Nav{document.getElementById{"help"}}
 
+   cards = Cards{repl, repl.nav}
+   __raw_cards each {topic, desc, contents} ->
+      cards.register{topic, desc, contents}
+   cards.make_index{}
+
+
    ;; {window._cards, engine} = make_cards{repl}
 
    engine = quaint.Engine{quaint.dispatch}
 
    window.__qengine = engine
-   window.__cards = __cards
+   window.__cards = cards.cards
    window.__repl = repl
    window.DOM = DOM
    window.$io = {}
@@ -156,7 +143,7 @@ setup{} =
 
       _help{match topic} =
          when __cards[topic] ->
-            __cards[topic][1]{__repl, 0}
+            __cards[topic][1]{0}
          else ->
             "Invalid help topic: \"" + topic + "\""
 

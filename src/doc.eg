@@ -1,11 +1,11 @@
 
 require:
-   fs, quaint
+   fs
+   quaint
 
 provide:
    acquire_cards
-   __insert_doc
-   card_displayer
+   Cards
 
 globals: __dirname
 
@@ -46,42 +46,42 @@ acquire_cards{*, #data{*filenames}} =
    results
 
 
-__clickable{repl, code, text = null} =
-   .clickable %
-      onclick{e and {shiftKey => match}} =
-         do: e.preventDefault{}
-         true? ->
-            repl.cm.setValue{code}
-            repl.cm.focus{}
-         else ->
-            repl.process_all{code, true, true}
-            repl.cm.focus{}
-      text or repl.highlight{code}
 
-__insert_doc{directory, repl, tab, topic, text = null} =
-   .help %
-      onclick{e} =
-         e.preventDefault{}
-         data = directory[topic]
-         match e.which:
-            when not data ->
-               card_displayer{"error", "Error", ...}{repl, tab} with
-                  "__ERROR: There is no documentation for `\"" + topic + "\""
-            1 ->
-               data[1]{repl, tab}
-               repl.nav.focus_tab{tab}
-            2 ->
-               data[1]{repl, repl.tabs.length}
-      text or topic
+class Cards:
 
-
-card_displayer{directory}{topic, description, text}{repl, tab} =
+   constructor{@repl, @nav} =
+      @cards = {=}
+      @Q = quaint.Engine{quaint.dispatch.clone{}}
 
    clickable{code, text = null} =
-      __clickable{repl, code, text}
+      .clickable %
+         onclick{e and {shiftKey => match}} =
+            do: e.preventDefault{}
+            true? ->
+               @repl.cm.setValue{code}
+               @repl.cm.focus{}
+            else ->
+               @repl.process_all{code, true, true}
+               @repl.cm.focus{}
+         text or @repl.highlight{code}
 
-   insert_doc{topic, text = null} =
-      __insert_doc{directory, repl, tab, topic, text}
+   insert_doc{tab, topic, text = null} =
+      .help %
+         onclick{e} =
+            e.preventDefault{}
+            data = @cards[topic]
+            match e.which:
+               when not data ->
+                  @card_displayer{"error", "Error", ...}{tab} with
+                     "__ERROR: There is no documentation for `\"" + topic + "\""
+                  ;; card_displayer{"error", "Error", ...}{repl, tab} with
+                  ;;    "__ERROR: There is no documentation for `\"" + topic + "\""
+               1 ->
+                  data[1]{tab}
+                  @repl.nav.focus_tab{tab}
+               2 ->
+                  data[1]{@nav.tabs.length}
+         text or topic
 
    make_row{items} =
       span %
@@ -91,54 +91,75 @@ card_displayer{directory}{topic, description, text}{repl, tab} =
             item ->
                span % [span.separator % "", item]
 
-   getcode{node} =
-      code = shed{node}.location.text{}
-      lines = code.split{"\n"}
-      while [R"^ *$"? lines[0]]:
-         lines.shift{}
-      while [R"^ *$"? lines[lines.length - 1]]:
-         lines.pop{}
-      R"( *)(.*)"! {_, indent, line0} = lines[0]
-      nindent = indent.length
-      xs.join{"\n"} where
-         xs = {line0} ++
-            lines.slice{1} each line ->
-               line.slice{nindent}
+   register{topic, description, text} =
+      qdesc = @Q.run{description}
+      @cards[topic] = {qdesc, @card_displayer{topic, description, text}}
 
-   shed{node} =
-      chain node:
-         quaint.shed{@}
+   make_index{} =
+      @cards.index = {"Index"} with {tab} ->
+         @nav.insert_page{tab, -1, .index} with
+            .card % .blocks %
+               h2 % .Index
+               table %
+                  items{@cards}.sort{} each {topic, {desc, f}} ->
+                     tr %
+                        td % @insert_doc{tab, topic}
+                        td % desc
+         undefined
 
+   card_displayer{topic, description, text} = {tab} ->
 
-   dispatch = quaint.dispatch.clone{}
-   components = {...} with
+      insert_doc{topic, text = null} =
+         @insert_doc{tab, topic, text}
 
-      "maybe label / code"{engine, node, {label => match, => code}} =
-         #text{""} ->
-            match quaint.collapse{"/", code}:
-               {x} -> clickable{getcode{x}}
-               {*xs} -> make_row with
-                  xs each x -> clickable{getcode{x}, null}
-         label ->
-            clickable with
-               getcode{code}
-               engine.run{label}
+      getcode{node} =
+         code = shed{node}.location.text{}
+         lines = code.split{"\n"}
+         while [R"^ *$"? lines[0]]:
+            lines.shift{}
+         while [R"^ *$"? lines[lines.length - 1]]:
+            lines.pop{}
+         R"( *)(.*)"! {_, indent, line0} = lines[0]
+         nindent = indent.length
+         xs.join{"\n"} where
+            xs = {line0} ++
+               lines.slice{1} each line ->
+                  line.slice{nindent}
 
-      "maybe label /? topic"{engine, node, {label => match, => topic}} =
-         #text{""} ->
-            match quaint.collapse{"/", topic}:
-               {x} -> insert_doc{shed{x}.location.text{}}
-               {*xs} -> make_row with
-                  xs each x -> insert_doc{shed{x}.location.text{}}
-         label ->
-            insert_doc with
-               shed{topic}.location.text{}
-               shed{label}.location.text{}
+      shed{node} =
+         chain node:
+            quaint.shed{@}
 
-   items{components} each {spec, fn} ->
-      dispatch.register with quaint.Spec{spec, fn}
+      dispatch = quaint.dispatch.clone{}
 
-   Q = quaint.Engine{dispatch}
+      components = {...} with
 
-   repl.nav.insert_page{tab, -1, topic, .card % Q.run{text}}
-   undefined
+         "maybe label / code"{engine, node, {label => match, => code}} =
+            #text{""} ->
+               match quaint.collapse{"/", code}:
+                  {x} -> @clickable{getcode{x}}
+                  {*xs} -> @make_row with
+                     xs each x -> @clickable{getcode{x}, null}
+            label ->
+               @clickable with
+                  getcode{code}
+                  engine.run{label}
+
+         "maybe label /? topic"{engine, node, {label => match, => topic}} =
+            #text{""} ->
+               match quaint.collapse{"/", topic}:
+                  {x} -> insert_doc{shed{x}.location.text{}}
+                  {*xs} -> @make_row with
+                     xs each x -> insert_doc{shed{x}.location.text{}}
+            label ->
+               insert_doc with
+                  shed{topic}.location.text{}
+                  shed{label}.location.text{}
+
+      items{components} each {spec, fn} ->
+         dispatch.register with quaint.Spec{spec, fn}
+
+      Q = quaint.Engine{dispatch}
+
+      @nav.insert_page{tab, -1, topic, .card % Q.run{text}}
+      undefined
