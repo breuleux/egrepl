@@ -13,11 +13,11 @@ require:
    "codemirror/addon/runmode/runmode"
    "./earlmode"
    "./repl" ->
-      Repl, Nav
+      Repl
    "./util" ->
       DOM, repr
    "./doc" ->
-      Cards
+      Cards, Nav
       ;; card_displayer as __card_displayer
       ;; __insert_doc
 
@@ -104,10 +104,7 @@ setup{} =
                      else ->
                         CodeMirror.Pass
 
-
-   repl.nav = Nav{document.getElementById{"help"}}
-
-   cards = Cards{repl, repl.nav}
+   cards = Cards{repl} with Nav{document.getElementById{"help"}}
    __raw_cards each {topic, desc, contents} ->
       cards.register{topic, desc, contents}
    cards.make_index{}

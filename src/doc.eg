@@ -2,12 +2,94 @@
 require:
    fs
    quaint
+   "./util" ->
+      DOM, dom_node_clear
 
 provide:
+   Nav
    acquire_cards
    Cards
 
 globals: __dirname
+
+
+
+class Nav:
+
+   constructor{@pane} =
+      @tabs = {}
+
+   make_history_label{tab, pos, label, cls} =
+      ^["." + cls] %
+         label
+         onclick{e} =
+            @render_tab{tab, pos}
+
+   gettab{match tab} =
+      do:
+         create{} =
+            pages = {}
+            box = DOM with
+               div.tab %
+                  div.tab_header %
+                     div.breadcrumbs %
+                     div.close_tab %
+                        onclick{e} =
+                           @tabs[tab] = null
+                           dom_node_clear with
+                              @pane.children[tab]
+                  div % [div %]
+            data = {pages, box.children[0].children[0], box.children[1], -1}
+            {box, data}
+
+      when @tabs[tab] ->
+         @tabs[tab]
+
+      when @tabs[tab] === null ->
+         {box, data} = create{}
+         @tabs[tab] = data
+         @pane.replaceChild with
+            box
+            @pane.children[tab]
+         data
+
+      when tab == @tabs.length ->
+         {box, data} = create{}
+         @tabs.push with data
+         @pane.appendChild with box
+         data
+
+      else ->
+         throw E.repl.no_such_tab{tab}
+
+   insert_page{tab, var pos, label, page} =
+      {pages, ltarget, ptarget, current} = @gettab{tab}
+      if pos == -1:
+         pos = current + 1 ;;pages.length
+      pages.splice{pos}
+      pages.push with {label, page}
+      @render_tab{tab, pos}
+
+   render_tab{tab, pos} =
+      {pages, ltarget, ptarget, _} = @tabs[tab]
+      @tabs[tab][3] = pos
+      mkh{pos, label, cls} = @make_history_label{tab, pos, label, cls}
+      dom_node_clear{ltarget}
+      enumerate{pages} each {i, {name, page}} ->
+         ltarget.appendChild with DOM with
+            match i:
+               < pos  -> mkh{i, name, .previous_page}
+               == pos -> mkh{i, name, .current_page}
+               > pos  -> mkh{i, name, .next_page}
+         if i < pages.length - 1:
+            ltarget.appendChild with DOM with span.history_separator %
+      {_, page} = pages[pos]
+      ptarget.replaceChild{..., ptarget.children[0]} with DOM with page
+
+   focus_tab{tab} =
+      @pane.children[tab].scrollIntoView{true}
+
+
 
 
 acquire_cards{*, #data{*filenames}} =
@@ -74,11 +156,9 @@ class Cards:
                when not data ->
                   @card_displayer{"error", "Error", ...}{tab} with
                      "__ERROR: There is no documentation for `\"" + topic + "\""
-                  ;; card_displayer{"error", "Error", ...}{repl, tab} with
-                  ;;    "__ERROR: There is no documentation for `\"" + topic + "\""
                1 ->
                   data[1]{tab}
-                  @repl.nav.focus_tab{tab}
+                  @nav.focus_tab{tab}
                2 ->
                   data[1]{@nav.tabs.length}
          text or topic
