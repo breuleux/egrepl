@@ -1,30 +1,17 @@
 
 require:
    "earl-grey" as eg
-   "earl-grey/lib/location" ->
-      Location, highlight_locations
-      format_error
-   "earl-grey/lib/lex" ->
-      tokenize
-   "earl-grey/lib/parse" ->
-      parse
    quaint
    codemirror as CodeMirror
-   "codemirror/addon/runmode/runmode"
-   "./earlmode"
    "./repl" ->
       Repl
    "./util" ->
       DOM, repr
    "./doc" ->
       Cards, Nav
-      ;; card_displayer as __card_displayer
-      ;; __insert_doc
 
 
 provide:
-   Repl
-   parse, tokenize, eg.Source as Source
    setup
 
 globals:
@@ -36,10 +23,11 @@ macros:
    {acquire_cards = acquire_cards}
 
 
-__raw_cards = acquire_cards with
-   "basic.q"
-   "examples.q"
-   "advanced.q"
+__raw_cards =
+   acquire_cards with
+      "basic.q"
+      "examples.q"
+      "advanced.q"
 
 
 
@@ -177,9 +165,9 @@ setup{} =
                      else:
                         $libs[url] = true
                         __repl.lock{}
-                        timer = setTimeout{f, 2000} where f{} =
+                        timer = setTimeout{f, 5000} where f{} =
                            $out.log with .warning %
-                              "Loading \"" + url + "\" is taking more than 2 seconds."
+                              "Loading \"" + url + "\" is taking more than five seconds."
                               "A green box will appear here once if/when it is loaded."
                            __repl.unlock{}
                            $libs[url] = false
