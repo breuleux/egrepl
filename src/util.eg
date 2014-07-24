@@ -4,7 +4,7 @@ provide:
    DOM, dom_node_clear, mktable, repr
 
 globals:
-   document, window, alert, jQuery, setTimeout
+   document, window, alert, setTimeout
    Element
 
 

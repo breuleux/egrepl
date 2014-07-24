@@ -15,7 +15,7 @@ provide:
    setup
 
 globals:
-   document, window, alert, jQuery, setTimeout
+   document, window, alert, setTimeout
    Element
 
 macros:

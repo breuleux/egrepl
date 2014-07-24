@@ -10,12 +10,13 @@ require:
    "./earlmode"
    "./util" ->
       DOM, dom_node_clear, mktable, repr
+   jquery as jQuery
 
 provide:
    Outputter, Repl, repr
 
 globals:
-   document, window, alert, jQuery, setTimeout
+   document, window, alert, setTimeout
    Element
 
 
