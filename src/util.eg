@@ -95,6 +95,8 @@ repr{match x, Function? recur = repr} =
       .sequence % [entries each x -> recur{x, repr}]
    Node? n ->
       n
+   Element? e ->
+      e
    when x["::repr"] ->
       x["::repr"]{recur}
    when Object.getPrototypeOf{x} === Object.prototype ->

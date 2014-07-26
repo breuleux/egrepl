@@ -34,6 +34,15 @@ help --> Main help -->
 
   Or you can look at /?examples~!
 
+  === Install
+
+  ` npm install -g earlgrey
+
+  This will install the `earl command. Run `earl with no arguments to
+  start an interactive interpreter, or run an EG program as:
+
+  ` earl run file.eg
+
   === Links
 
   * [Source code]::https://github.com/breuleux/earl-grey

@@ -1,9 +1,9 @@
 
 require:
-   "earl-grey" as eg
-   "earl-grey/lib/util" ->
+   "earlgrey" as eg
+   "earlgrey/lib/util" ->
       GenSym
-   "earl-grey/lib/location" ->
+   "earlgrey/lib/location" ->
       format_error
    codemirror as CodeMirror
    "codemirror/addon/runmode/runmode"
