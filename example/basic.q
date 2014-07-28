@@ -14,6 +14,8 @@ help --> Main help -->
   * Advanced and deeply integrated [pattern matching]/?patterns
   * Arbitrary new features can be defined with /?macros
 
+  Earl Grey is [written in itself]::https://github.com/breuleux/earl-grey/tree/master/src.
+
   === The REPL
 
   To your right there is an [__ interactive interpreter] in which you
@@ -96,61 +98,98 @@ brackets --> The semantics of brackets -->
 
   == The semantics of brackets in Earl Grey
 
-  Brackets in EG are certainly "odd", in the sense that they don't
-  follow conventional semantics: blocks are defined using indent or
-  `[[]] (instead of the conventional `{}), grouping expressions is
-  done with `[[]] (instead of the conventional `()), function calls
-  are done as `f{} (instead of the conventional `f()).
+  === A rant about conventions
 
-  First, let me say that it _is really strange at first, but you do
-  get used to it (or at least I did).
+  Bear with me here.
 
-  Second, this scheme is not accidental. There a _logic behind it
-  which I will explain here. Basically, there are two types of
+  The first thing a lot of people may notice with EG is that it breaks
+  nearly universal conventions by using braces for calls and square
+  brackets for blocks and grouping.
+
+  This is not just to be different. The reason behind these unorthodox
+  choices is that conventional bracket semantics __[lack
+  consistency]. Adopting them requires syntax that is more complex
+  than necessary. I mean, consider the following:
+
+  * It makes no sense to use different brackets for array literals
+    than for arrays of arguments. Both of them are, for all intents
+    and purposes, the same data structure. Forget about convention:
+    only think about _consistency: if `f(...)  calls `f on a list of
+    arguments, `(...) should be an array literal. This makes the
+    semantics of `(...) _[context-insensitive] and therefore simpler.
+
+    Alas, this is _impossible using conventional syntax, because `()~s
+    are used for lists of arguments and for grouping. These two roles
+    are utterly inconsistent and therefore come at an inherent cost in
+    syntactic simplicity.
+
+  * Similarly, it makes no sense to use different brackets for
+    grouping and for blocks. You can see this in C, Java and
+    JavaScript where `{a; b; c} defines a block and executes
+    statements in sequence and `(a, b, c) executes a sequence of
+    expressions. Why are there two ways to do the same bloody thing?
+
+  Basically, current conventions really look like they were drawn from
+  a hat at random. People are used to them, and they are not _bad, but
+  they are not _good.
+
+  === What Earl Grey does
+
+  The upshot of all this is that there are two fundamental roles for
   brackets:
 
-  # __[Data brackets] define data structures: arrays, objects, lists
-    of arguments, and so on. EG uses `{} as data brackets.
+  # __[Defining data structures]: arrays, hashes, lists of arguments.
+  # __[Grouping expressions]: priority disambiguation, blocks.
 
-  # __[Grouping brackets] disambiguate priority when necessary and can
-    group several expressions into "blocks". EG uses `[[]] as grouping
-    brackets.
+  Now, part of what I wanted to do with EG is to simplify syntax as
+  much as possible while preserving infix syntax and reducing
+  structural noise (aka parentheses and brackets). Assigning one
+  bracket type to role 1 and another to role 2 is clearly the simplest
+  policy. Parentheses, unfortunately, conventionally fall in both
+  categories, so assigning them one role but not the other would be
+  confusing and a source of hard-to-track errors. It is easier to
+  avoid using them wrong when it is always wrong to use them.
 
-  These simple and consistent semantics cut down the complexity of
-  abstract syntax because they are not context sensitive. For
-  instance, /[parseInt{"101", 2}] can also be written as
-  /[args = {"101", 2}, parseInt args]. This kind of referential
-  transparency is uncommon in mainstream programming languages.
+  Now, in JavaScript, there are two things you may want to do with a
+  function: _call it (`f(x)), or _index it (`f[x] or `[f.x]). It appeared
+  to me that the simplest way to handle these cases is that
+  __[function calls are a special case of indexing], when the index is
+  an array. It makes sense: you index with a string or a number, you
+  call with a list of arguments. These are two different data types,
+  so a generic "send" mechanism can simply dispatch on type to figure
+  out whether it ought to index or call.
 
-  .note ..
+  This indicates `[[]] are the least disruptive brackets for grouping,
+  because they preserve indexing syntax. Besides, provided that indent
+  is the usual way to define blocks, it doesn't really matter which
+  bracket type it translates to, so breaking that convention is not a
+  big deal.
 
-    Since `[[]] is only for grouping, /[parseInt args] is the same
-    thing as /[parseInt[args]]. Indeed, in EG, function application is
-    a special case of indexing where the index is an array.
+  All this shuffling around has two key advantages:
 
-  Unfortunately, the way parentheses are used in conventional
-  languages is incompatible with this scheme. The least confusing way
-  to go about this issue is to not use parentheses at all, because it
-  is easier to avoid using them wrong when it is always wrong to use
-  them. Square brackets are a natural choice for grouping because it
-  preserves conventional indexing syntax.
+  # Brackets are _[context-insensitive]: they produce the same AST
+    regardless of where they are located.
+
+  # If function calls are a special case of indexing, you get
+    application syntax for free: /[args = {"101", 2}, parseInt args]
 
   === Recovering the standard semantics for parentheses
 
-  Parentheses are currently illegal tokens, but that needs not be the
-  case forever. By mapping `f(expr) to `f{expr} and `(expr) to
-  `[[expr]], conventional syntax can be supported as syntactic sugar.
+  Regardless of consistency, conventional semantics for parentheses
+  could be recovered with sugar, by mapping `f(expr) to `f{expr} and
+  `(expr) to `[[expr]]. The REPL's editor actually does this on the
+  fly when you type parentheses.
 
-  The reason why I did not do it is that I am not sure that sugar is
-  foolproof and I want to test the "pure" version of the language
-  first. I invite everyone to give EG's bracket scheme a fair
-  shot. The consistency is pretty neat, especially if you write
-  macros.
+  I have nothing against such sugar in principle, since it would have
+  no impact on the abstract syntax that is given to macros and the
+  like. The reason why I did not do it is that the sugar may have a
+  few counter-intuitive implications (for instance, a statement like
+  `return(x + y) would return an array) and I want to test the "pure"
+  version of the language first.
 
-  Alternatively, the sugar could be implemented in the text editors
-  themselves, translating parentheses as they are typed. I will
-  definitely consider the feedback I get on this matter.
-
+  Let me just say this: at first, EG's syntax felt wrong to me,
+  despite having designed it myself. But I got used to it quickly and
+  now it's everything else that feels wrong.
 
 
 syntax --> Syntax overview -->
