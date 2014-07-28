@@ -65,7 +65,7 @@ predicates --> Predicates (`[pred? x]) -->
 
   /
      match "apple banana cantaloupe":
-        R"[^ ]{5,5}"? -> "there is a 5-letter word"
+        R"\b\w{5,5}\b"? -> "there is a 5-letter word"
         else -> "there are no 5-letter words"
 
   Note that predicates do not modify or transform their arguments, but
@@ -87,7 +87,9 @@ predicates --> Predicates (`[pred? x]) -->
   /
      predicate! even{x} =
         x mod 2 == 0
+     ===
      even? x = 2  ;; this will succeed
+     ===
      even? x = 3  ;; but this will fail
 
   `[predicate!] wraps a function to define a `[::check] method. The
