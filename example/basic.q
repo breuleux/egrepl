@@ -10,11 +10,13 @@ help --> Main help -->
 
   Why should you care? Good question!
 
-  * A quirky, terse /?syntax inspired from Python
+  * A quirky, terse and highly consistent /?syntax inspired from Python
   * Advanced and deeply integrated [pattern matching]/?patterns
   * Arbitrary new features can be defined with /?macros
-
-  Earl Grey is [written in itself]::https://github.com/breuleux/earl-grey/tree/master/src.
+  * Can be used with existing JavaScript libraries and interact with
+    the Node ecosystem
+  * It is [written in itself]::https://github.com/breuleux/earl-grey/tree/master/src.
+    The compiler can be run in the browser (as it is here)
 
   === The REPL
 
@@ -852,3 +854,52 @@ blocks --> Blocks and indent -->
 
   Line breaks are always equivalent to commas except for when the line
   that follows continuates it (denoted with a leading backslash).
+
+
+match --> The `match control structure -->
+
+  == `match
+
+  `match does pattern matching of a value against one or more
+  patterns. Several operators and control structures, such as `try or
+  `each, contain implicit `match blocks.
+
+  /
+    calc{x} =
+       match x:
+          Number? n -> n
+          #add{calc! x, calc! y} -> x + y
+          #sub{calc! x, calc! y} -> x - y
+          #mul{calc! x, calc! y} -> x * y
+          #div{calc! x, calc! y} ->
+             match y:
+                0 -> throw E.division_by_zero{x}
+                y -> x / y
+          invalid ->
+             throw E.invalid_operation{invalid}
+
+    calc with #div{#add{10, #sub{4, 1}}, 2}
+
+  Note that:
+
+  /
+    fact{x} =
+       match x:
+          1 -> 1
+          n -> n * fact{n - 1}
+
+  has the following shorthand:
+
+  /
+    fact{match} =
+       1 -> 1
+       n -> n * fact{n - 1}
+
+  You can try to translate the `calc example to shorthand as an
+  exercise.
+
+  See the section on [pattern matching]/?patterns for more information
+  about patterns.
+
+
+
