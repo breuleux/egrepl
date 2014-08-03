@@ -653,44 +653,80 @@ patterns --> Pattern matching -->
 
   Pattern matching therefore combines __verification that a value is
   structured as expected and __extraction of its parts into variables
-  for further processing. The following table demonstrates EG's
-  powerful pattern language:
+  for further processing. EG's pattern language has the following
+  features (`p denotes a subpattern):
 
-  .note ..
-    For demonstration purposes, most examples are of the form
-    `{pattern = value}, which creates an object. Patterns can of
-    course be found in other contexts, listed in the next section.
+   + Pattern            + Meaning
+   | `variable          | Match anything and put in `variable
+   | `literal           | Match a literal string or number
+   | `[== value]        | Equality test (other comparison operators also work)
+   | `[p when pred]     | Match pattern `p and check if the predicate is true
+   | `{p1, p2, ...}     | Deconstruct/?deconstruction an array
+   | `{field => p, ...} | Deconstruct/?deconstruction an object
+   | `[type? p]         | Check type or use a predicate/?predicates
+   | `[func! p]         | Transform using a function or projector/?projectors
+   | `[p1 and p2]       | Must match all patterns
+   | `[p1 or p2]        | Must match _one pattern. The patterns are tried sequentially and all branches must contain the same variables.
+   | [`else, `[_]]      | Match anything, but discard the value
 
-  .pattern_table ..
-    + Pattern           + Example               + Meaning
-    | `variable         | /{v = 123}            | Match anything, put in `variable
-    | `literal          | /[10 = 5 + 5]         | Match the literal
-    | `[== value]       | /[== [10 + 10] = 20]  | Equality test (other comparison operators also work)
-    | `[p when pred] | /[x when x > 0 = 2] | Match if the predicate is true
-    | `{p1, p2, ...}    | /{{a, b} = {1, 2}}    | Deconstruct/?deconstruction an array
-    | `{field => p, ...} | /{{x => z} = {x = 69}} | Deconstruct/?deconstruction an object
-    | `[type? p]  | /{String? s = .hello} | Check type or use a predicate/?predicates
-    | `[func! p]  | /{Number! n = "666"} | Transform using a function or projector/?projectors
-    | `[p1 and p2] | /{x and y = 88}   | Must match all patterns
-    | `[p1 or p2]  | /[{1,x} or {x,1} = {5,1}, x] | Must match _one pattern, tried sequentially. All branches must contain the same variables.
-    | [`else, `[_]] | /{{a, _} = {1, 2}} | Match anything, discard value
+   === Use cases
 
-  === Where to use a pattern
+   ==== Assignment
 
-  In general, everything to the left of the `[=] and `[->] operators
-  is a pattern. Control structures such as /?match and /?each expect
-  one or more __clauses of the form `[pattern -> body] in their
-  body. For instance:
+   `[pattern = value] matches the value against the pattern, setting
+   variables for the statements below. Example: /[{a, String! b} = {1, 2}].
 
-  /
-    match 3:
-       n when n < 1 -> "less than one"
-       1 -> .one
-       2 -> .two
-       n -> "more than two"
+   `{pattern = value} sets _fields of an object instead of variables.
+   Example: /{{a, String! b} = {1, 2}}
 
-  One of the most interesting features in EG is that lists of clauses
-  can be nested easily by using the `match keyword _as a pattern:
+   ==== Functions
+
+   `[{p1, p2, ...} -> value] is an anonymous function. Each pattern
+   matches the corresponding argument.
+   
+   Note: `[name{p1, p2, ...} = value] is equivalent to
+   `[name = {p1, p2, ...} -> value].
+
+   ==== Matching clauses
+
+   `[match value: [p1 -> body1, p2 -> body2, ...]] first tries to
+   match the value against `p1. If the match succeeds, it executes
+   `body1. Otherwise, it tries `p2, and so on. See /?match. Example:
+
+   /
+     match 3:
+        n when n < 1 -> "less than one"
+        1 -> .one
+        2 -> .two
+        n -> "more than two"
+
+   ==== Looping
+
+   `[array each [p1 -> body1, p2 -> body2, ...]] iterates over each
+   value in `array and tries to match it. See /?each. Example:
+
+   /
+     -10..10 each
+        < 0  -> 0
+        > 5  -> 5
+        n    -> n
+
+
+  === `match shortcut
+
+  Lists of clauses can be nested easily by using the `match keyword
+  _as a pattern. In other words:
+
+  / f{x} = match x: {a, b} -> a + b
+
+  can be written like this:
+
+  / f{match} = {a, b} -> a + b
+
+  `match can be anywhere in the pattern and you can also write `[match x]
+  if you still want to give a name to the variable.
+
+  Here is a more elaborate example:
 
   /
     calc{match} =
@@ -703,7 +739,7 @@ patterns --> Pattern matching -->
           y -> x / y
        invalid ->
           throw E.invalid_operation{invalid}
-
+    ===
     calc with #div{#add{10, #sub{4, 1}}, 2}
 
   If `match is found somewhere in a list of arguments, then the body
@@ -877,7 +913,7 @@ match --> The `match control structure -->
                 y -> x / y
           invalid ->
              throw E.invalid_operation{invalid}
-
+    ===
     calc with #div{#add{10, #sub{4, 1}}, 2}
 
   Note that:
