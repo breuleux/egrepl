@@ -18,6 +18,12 @@ help --> Main help -->
   * It is [written in itself]::https://github.com/breuleux/earl-grey/tree/master/src.
     The compiler can be run in the browser (as it is here)
 
+  Earl Grey can be adapted easily to support new functionality and
+  wrap existing libraries to get rid of boilerplate and give them
+  nicer syntax. For instance, a mere nine lines of macro code can make
+  the React library more pleasant to use than JavaScript+JSX.
+  [Here is how]/?react_example.
+
   === The REPL
 
   To your right there is an [__ interactive interpreter] in which you
@@ -635,7 +641,7 @@ deconstruction --> Deconstructing data structures -->
 
   / {{String! a, Array! b} = {10, 10}}
 
-  / {R"(\\d+).(\\d+)e([+\\-]?\\d+)"! {whole, int, frac, exp} = "10.7e9"}
+  / {R"(\d+).(\d+)e([+\-]?\d+)"! {whole, int, frac, exp} = "10.7e9"}
 
   See also the section on [pattern matching]/?patterns.
 
@@ -656,56 +662,56 @@ patterns --> Pattern matching -->
   for further processing. EG's pattern language has the following
   features (`p denotes a subpattern):
 
-   + Pattern            + Meaning
-   | `variable          | Match anything and put in `variable
-   | `literal           | Match a literal string or number
-   | `[== value]        | Equality test (other comparison operators also work)
-   | `[p when pred]     | Match pattern `p and check if the predicate is true
-   | `{p1, p2, ...}     | Deconstruct/?deconstruction an array
-   | `{field => p, ...} | Deconstruct/?deconstruction an object
-   | `[type? p]         | Check type or use a predicate/?predicates
-   | `[func! p]         | Transform using a function or projector/?projectors
-   | `[p1 and p2]       | Must match all patterns
-   | `[p1 or p2]        | Must match _one pattern. The patterns are tried sequentially and all branches must contain the same variables.
-   | [`else, `[_]]      | Match anything, but discard the value
+  + Pattern            + Meaning
+  | `variable          | Match anything and put in `variable
+  | `literal           | Match a literal string or number
+  | `[== value]        | Equality test (other comparison operators also work)
+  | `[p when pred]     | Match pattern `p and check if the predicate is true
+  | `{p1, p2, ...}     | Deconstruct/?deconstruction an array
+  | `{field => p, ...} | Deconstruct/?deconstruction an object
+  | `[type? p]         | Check type or use a predicate/?predicates
+  | `[func! p]         | Transform using a function or projector/?projectors
+  | `[p1 and p2]       | Must match all patterns
+  | `[p1 or p2]        | Must match _one pattern. The patterns are tried sequentially and all branches must contain the same variables.
+  | [`else, `[_]]      | Match anything, but discard the value
 
-   === Use cases
+  === Use cases
 
-   ==== Assignment
+  ==== Assignment
 
-   `[pattern = value] matches the value against the pattern, setting
-   variables for the statements below. Example: /[{a, String! b} = {1, 2}].
+  `[pattern = value] matches the value against the pattern, setting
+  variables for the statements below. Example: /[{a, String! b} = {1, 2}].
 
-   `{pattern = value} sets _fields of an object instead of variables.
-   Example: /{{a, String! b} = {1, 2}}
+  `{pattern = value} sets _fields of an object instead of variables.
+  Example: /{{a, String! b} = {1, 2}}
 
-   ==== Functions
+  ==== Functions
 
-   `[{p1, p2, ...} -> value] is an anonymous function. Each pattern
-   matches the corresponding argument.
+  `[{p1, p2, ...} -> value] is an anonymous function. Each pattern
+  matches the corresponding argument.
    
-   Note: `[name{p1, p2, ...} = value] is equivalent to
-   `[name = {p1, p2, ...} -> value].
+  Note: `[name{p1, p2, ...} = value] is equivalent to
+  `[name = {p1, p2, ...} -> value].
 
-   ==== Matching clauses
+  ==== Matching clauses
 
-   `[match value: [p1 -> body1, p2 -> body2, ...]] first tries to
-   match the value against `p1. If the match succeeds, it executes
-   `body1. Otherwise, it tries `p2, and so on. See /?match. Example:
+  `[match value: [p1 -> body1, p2 -> body2, ...]] first tries to
+  match the value against `p1. If the match succeeds, it executes
+  `body1. Otherwise, it tries `p2, and so on. See /?match. Example:
 
-   /
+  /
      match 3:
         n when n < 1 -> "less than one"
         1 -> .one
         2 -> .two
         n -> "more than two"
 
-   ==== Looping
+  ==== Looping
 
-   `[array each [p1 -> body1, p2 -> body2, ...]] iterates over each
-   value in `array and tries to match it. See /?each. Example:
+  `[array each [p1 -> body1, p2 -> body2, ...]] iterates over each
+  value in `array and tries to match it. See /?each. Example:
 
-   /
+  /
      -10..10 each
         < 0  -> 0
         > 5  -> 5

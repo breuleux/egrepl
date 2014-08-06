@@ -193,12 +193,12 @@ examples --> List of examples -->
         "yes"
   span.separator ..
   Anonymous function /
-     macro [~]{*, #data{#void{}, body}}:
+     macro [~]{*, form, #data{#void{}, body}}:
         ;; We mark the $ variable to be resolved in the same
-        ;; environment as the body (this must be done for any
+        ;; environment as the form (this must be done for any
         ;; variable introduced by a macro in order to make it
         ;; visible)
-        dolla = body.env.mark{'$}
+        dolla = form.env.mark{'$}
         '[{^dolla} -> ^body]
      ===
      add10 = ~[$ + 10]
@@ -213,3 +213,155 @@ examples --> List of examples -->
      10 + 90 where
         a + b = a - b
 
+
+react_example --> Wrapping React -->
+
+  == An interface for React in Earl Grey
+
+  .note ..
+    Click on the code snippets in the order that they are given if you
+    want them to work properly.
+
+  React::http://facebook.github.io/react/ is a library to build user
+  interfaces on the web. It is based on a virtual DOM. Let's load it:
+  (click on the code to evaluate it!)
+
+  / load "http://fb.me/react-with-addons-0.11.0.js" as React
+
+  React comes with a language called JSX that lets you embed HTML
+  templates in the code. We won't need it. Instead we will define an
+  _[operator macro] to define virtual DOM nodes.
+
+  === The `[%%] operator macro
+
+  I have not yet decided on an API for custom precedence, but that
+  doesn't matter too much. The default operator priority is tighter
+  than assignment and comparison and logical operators and
+  incomparable with arithmetic. We will use the `[%%] operator to
+  create `React.DOM elements in a nice way:
+
+  /
+    macro [%%]{*, #data{#symbol{tag}, #multi! #multi{*exprs}}}:
+       props = '{=}
+       children = '{}
+       exprs each match x ->
+          '[^k = ^v] -> props.push{x}
+          else -> children.push{x}
+       'React.DOM[^=tag]{^props, *[^children]}
+
+  I'll explain what all that gibberish does, but first let's see the
+  fruit of our labor:
+
+  /
+    React.renderComponent{node, $out.elem} where
+       node = em %% [strong %% "hello"]
+
+  /
+    React.renderComponent{node, $out.elem} where node =
+       button %%
+          onClick{e} = $out.log{.hello}
+          "Say hello!"
+
+  Seems nice. Now let's go over the macro code:
+
+  * `[macro [%%]{*, ...}:] a macro is a function of four arguments,
+    but we only use the last one here. The `[*] denotes an anonymous
+    rest argument, which lets us ignore the first three arguments.
+
+  * `[#data{lhs, rhs}] is an AST node. The first part will be the code
+    for the left hand side of `[%%], and the second is the right hand
+    side. I think the best way to understand is by example, using the
+    /?quote operator. For instance, this is the AST of an expression:
+    /['[span %% "hello"]] (you can click on the ...s to expand their
+    contents).
+
+  * `[#multi! #multi{*exprs}] is just a trick to normalize bodies. Look at
+    /['x] and /['[x, y]], then look at /[#multi! 'x] and
+    /[#multi! '[x, y]]. The latter representation is easier to manipulate
+    because we are guaranteed to get a `[#multi] node.
+
+  * `[props = '{=}] creates code for an empty object.
+
+  * `[children = '{}] creates code for an empty array.
+
+  * `[exprs each match x ->] iterates over each expression in the body
+    on the right hand side of `[%%]. The expression is put in the
+    variable `x, but we will also do pattern matching on it.
+
+  * `['[^k = ^v] -> props.push{x}] will match any code that looks like
+    `[foo = bar]. These are property definitions, so we push them into
+    the empty object we created previously.
+
+  * `[else -> children.push{x}]~: any other expression defines a child
+    node.
+
+  * Finally, `['React.DOM[^=tag]{^props, *[^children]}] builds the
+    code that will replace the macro. `[^=tag] inserts a
+    literal. `[^props] inserts the code we built for the properties
+    object, and `[*[^children]] splices in the array of children we
+    built.
+
+  The code `[div %% [id = "x", "y", "z"]] will therefore produce the
+  code `React.DOM["div"]{{id = "x"}, "y", "z"}.
+
+  === The `react macro
+
+  This one is simpler:
+
+  /
+    macro react{*, #data{v and #symbol{name}, #multi! #multi{*exprs}}}:
+       '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
+
+  This maps `[react Banana: render{} = ...] to
+
+  `[Banana and React.DOM["Banana"] = React.createClass{{render{} = ...}}]
+
+  Setting `React.DOM[name] is important because that is where `[%%]
+  will look for it.
+
+  The idiom `[x and y = z] is similar to `[x = y = z] in other
+  languages.
+
+  === Making a component
+
+  Here is a simple counter component. It's also a great game (how many
+  times can you click the button in an hour?):
+
+  /
+    react Counter:
+       getInitialState{} =
+          {count = this.props.initial}
+       render{} =
+          [@] = this
+          div %%
+             "Count = ", @state.count
+             br %%
+             button %%
+                onClick{e} =
+                   @setState with {count = @state.count + @props.increment}
+                @props.label
+
+  Let's test it!
+
+  /
+    React.renderComponent{node, $out.elem} where node =
+       Counter %%
+          initial = 0
+          increment = 1
+          label = strong %% "Add one"
+
+  This is a pretty clean way to write and assemble components and we
+  only needed nine lines of macro code to wrap the functionality we
+  needed. A lot more could be done, for instance allowing CSS class or
+  id in the left hand side of `[%%], but this is left as an exercise.
+
+  For more information about writing macros:
+
+  * See /?macros for a vague overview of macros.
+
+  * See /?quote to read about the abstract representation of programs.
+
+  * See /?macrointerface for the full interface available to macros.
+
+  * See /?hygiene for how macros interact with scope and how a macro
+    can define variables for users.
