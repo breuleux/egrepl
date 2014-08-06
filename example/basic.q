@@ -22,7 +22,13 @@ help --> Main help -->
   wrap existing libraries to get rid of boilerplate and give them
   nicer syntax. For instance, a mere nine lines of macro code can make
   the React library more pleasant to use than JavaScript+JSX.
-  [Here is how]/?react_example.
+  [Here is how]/?react_example (while this does not involve a lot of
+  code, be aware that this does involves a few advanced concepts).
+
+  Now, when I look at a new programming language I always search for
+  examples first, so have some :\)
+
+  [Examples!]/?examples
 
   === The REPL
 
@@ -41,8 +47,6 @@ help --> Main help -->
   Type /help to display this page again if you lose it. You can also
   view the /?index (/help.index), and a selected list of /?topics
   (/help.topics).
-
-  Or you can look at /?examples~!
 
   === Install
 

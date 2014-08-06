@@ -7,6 +7,9 @@ examples --> List of examples -->
   to it. If you want to edit the code, you can press `Up to recall it
   from history and `Enter or `[Ctrl-Enter] to resubmit.
 
+  `[Shift-Click] an example to paste it in the REPL without executing
+  it.
+
   === Libraries
 
   Plotting with `flot /
@@ -238,7 +241,17 @@ react_example --> Wrapping React -->
   doesn't matter too much. The default operator priority is tighter
   than assignment and comparison and logical operators and
   incomparable with arithmetic. We will use the `[%%] operator to
-  create `React.DOM elements in a nice way:
+  create `React.DOM elements in a nice way.
+
+  Abstractly speaking, we want this code:
+
+  `[div %% [id = "x", "y", "z"]]
+
+  to generate this code, which builds a virtual DOM node:
+
+  `React.DOM["div"]{{id = "x"}, "y", "z"}.
+
+  (Note that an indented block is equivalent to `[[...]]. See /?blocks)
 
   /
     macro [%%]{*, #data{#symbol{tag}, #multi! #multi{*exprs}}}:
@@ -301,9 +314,6 @@ react_example --> Wrapping React -->
     object, and `[*[^children]] splices in the array of children we
     built.
 
-  The code `[div %% [id = "x", "y", "z"]] will therefore produce the
-  code `React.DOM["div"]{{id = "x"}, "y", "z"}.
-
   === The `react macro
 
   This one is simpler:
@@ -312,9 +322,13 @@ react_example --> Wrapping React -->
     macro react{*, #data{v and #symbol{name}, #multi! #multi{*exprs}}}:
        '[^v and React.DOM[^=name] = React.createClass{{^*exprs}}]
 
-  This maps `[react Banana: render{} = ...] to
+  This maps
 
-  `[Banana and React.DOM["Banana"] = React.createClass{{render{} = ...}}]
+  `[react Banana: [render{} = ..., ...]]
+
+  to:
+
+  `[Banana and React.DOM["Banana"] = React.createClass{{render{} = ..., ...}}]
 
   Setting `React.DOM[name] is important because that is where `[%%]
   will look for it.
