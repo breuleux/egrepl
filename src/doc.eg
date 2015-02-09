@@ -165,10 +165,10 @@ class Cards:
 
    make_row{items} =
       span %
-         items each
-            first item ->
+         enumerate{items} each {match, item} ->
+            0 ->
                item
-            item ->
+            else ->
                span % [span.separator % "", item]
 
    register{topic, description, text} =

@@ -5,60 +5,72 @@ require:
 
 CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
-   re = {...} with
-      id = R'
+   re = {
+      id = R```
          start
          in "a-zA-Z$_"
          * in "a-zA-Z$_0-9"
+      ```
 
-      numr = R'
+      numr = R```
          start
          {+d}, in "rR"
          {+ in"A-Za-z0-9_"}
          ?[".", {+ in "A-Za-z0-9_"}]
-      num = R'
+      ```
+      num = R```
          start
          {+ in "0-9_"}
          ?[".", {+d}]
          ?[in "eE", {? in "+-", + in "0-9_"}]
+      ```
 
-      lowprio = R'
+      lowprio = R```
          ;; +" "
          "=" or "=>" or "->" or "%" or ":"
          \ or "with" or "where" or "each"
          +" " or end
+      ```
 
-      lowprio1 = R'
+      lowprio1 = R```
          "=" or "=>" or "->" or "%" or ":"
          +" " or end
-      lowprio2 = R'
+      ```
+      lowprio2 = R```
          "with" or "where" or "each"
          +" " or end
+      ```
 
-      op = R'
+      op = R```
          start
          + in "+\\-*/~^<>=%&|?!@#.:'"
-      op2_open = R'
+      ```
+      op2_open = R```
          start
          in "[{"
-      comma = R'
+      ```
+      comma = R```
          start, ","
-      op2_close = R'
+      ```
+      op2_close = R```
          start
          in "}]"
-      op3 = R'
+      ```
+      op3 = R```
          start
          "with" or "where" or "when"
            \ or "and" or "not" or "or"
            \ or "in" or "mod"
            \ or "each" or "as"
          [+ in "+\\-*/~^<>=%&|?!@#.:'"] or boundary
-      op4 = R'
+      ```
+      op4 = R```
          start
          "`", {+ in "A-Za-z0-9_$"}, "`"
+      ```
+   }
 
-   {...} with
-
+   {
       startState{} = {
          mode = .code
          previous = null
@@ -199,7 +211,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                else: 0
 
          match line:
-            R'[start, in "]}"]? ->
+            R`start, in "]}"`? ->
                outer + add
             else ->
                inner + add
@@ -215,8 +227,8 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
       lineComment = ";;"
 
-      electricInput = R'[start, *" ", in "]})", end]
-
+      electricInput = R`start, *" ", in "]})", end`
+   }
 
 
 
