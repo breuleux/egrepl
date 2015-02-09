@@ -1,0 +1,172 @@
+
+require:
+   "earlgrey" as eg
+   "earlgrey/lib/stdenv" ->
+      topscope
+   "./repl" ->
+      Repl
+   "./util" ->
+      DOM, repr
+   "./doc" ->
+      Cards, Nav
+   "./editor" ->
+      Editor
+   codemirror as CodeMirror
+
+provide:
+   eg
+   egrepl, egeditor
+   Repl, DOM, repr
+   Cards, Nav
+
+
+
+egrepl{box, interactive, code} =
+
+   gene = eg.Generator{true}
+
+   repl = Repl with
+
+      box, interactive, code
+
+      {text} ->
+         try:
+            #success{gene.evaluate{eg.Source{text, "<repl>"}}}
+         catch e:
+            #failure{e}
+
+      {...} with
+         ;; smart parentheses
+         "'('"{cm} =
+            cur = cm.getCursor{}
+            tok = cm.getTokenAt{cur}
+            situation =
+               match tok.type:
+                  .string when tok.end > cur.ch ->
+                     .string
+                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                     .id
+                  .string ->
+                     .string
+                  .operator or .wordop or .open or .punctuation or === null ->
+                     .op
+                  else ->
+                     .id
+            match situation:
+               .string -> CodeMirror.Pass
+               .op -> cm.replaceSelection{"["}
+               .id -> cm.replaceSelection{"{"}
+
+         "')'"{cm} =
+            cur = cm.getCursor{}
+            tok = cm.getTokenAt{cur}
+            situation =
+               match tok.type:
+                  .string when tok.end > cur.ch ->
+                     .string
+                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                     .other
+                  .string ->
+                     .string
+                  else ->
+                     .other
+            match situation:
+               .string -> CodeMirror.Pass
+               else ->
+                  match tok.state.nest:
+                     {*, {match, *}} ->
+                        "{" -> cm.replaceSelection{"}"}
+                        "[" -> cm.replaceSelection{"]"}
+                        else -> CodeMirror.Pass
+                     else ->
+                        CodeMirror.Pass
+
+   glob = gene.evaluate{eg.Source{s, "<repl>"}} where
+      s = "globals: [global, window], if{typeof{global} === .undefined, window, global}"
+
+   repl.setenv{values} =
+      items{values} each {name, value} ->
+         gene.env.bind{topscope, name, #variable{name}}
+         glob[name] = value
+      undefined
+
+   repl.setenv{{...}} with
+      $io = {}
+      $current = -1
+
+   repl.eval with S[
+      macro $out{*, match}:
+         do:
+            globals: $current
+         #void{} ->
+            `$io[^=$current]`
+         expr ->
+            `$io[^=$current][^expr]`
+   ]
+
+   repl
+
+
+egeditor{target, success, failure, live = true} =
+
+   gene = eg.Generator{true}
+
+   ed = Editor with
+      target
+
+      {...} with
+         ;; smart parentheses
+         "'('"{cm} =
+            cur = cm.getCursor{}
+            tok = cm.getTokenAt{cur}
+            situation =
+               match tok.type:
+                  .string when tok.end > cur.ch ->
+                     .string
+                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                     .id
+                  .string ->
+                     .string
+                  .operator or .wordop or .open or .punctuation or === null ->
+                     .op
+                  else ->
+                     .id
+            match situation:
+               .string -> CodeMirror.Pass
+               .op -> cm.replaceSelection{"["}
+               .id -> cm.replaceSelection{"{"}
+
+         "')'"{cm} =
+            cur = cm.getCursor{}
+            tok = cm.getTokenAt{cur}
+            situation =
+               match tok.type:
+                  .string when tok.end > cur.ch ->
+                     .string
+                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                     .other
+                  .string ->
+                     .string
+                  else ->
+                     .other
+            match situation:
+               .string -> CodeMirror.Pass
+               else ->
+                  match tok.state.nest:
+                     {*, {match, *}} ->
+                        "{" -> cm.replaceSelection{"}"}
+                        "[" -> cm.replaceSelection{"]"}
+                        else -> CodeMirror.Pass
+                     else ->
+                        CodeMirror.Pass
+
+      {text} ->
+         try:
+            #success{gene.evaluate{eg.Source{text, "<ed>"}}}
+         catch e:
+            #failure{e}
+
+      success, failure, live
+
+   ed.eval{text} = gene.evaluate{eg.Source{text, "<ed>"}}
+   ed

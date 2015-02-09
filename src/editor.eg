@@ -1,0 +1,46 @@
+
+require:
+   codemirror as CodeMirror
+
+provide:
+   Editor
+
+
+class Editor:
+
+   constructor{@target, @keymap, @evaluate, @success, @failure, @live = true} =
+
+      @cm = CodeMirror with
+         @target
+         {
+            indentUnit = 3
+            viewportMargin = 1/0
+            theme = .repl
+            lineNumbers = true
+         }
+
+      @cm.addKeyMap{{...} & @keymap} with
+
+         "Ctrl-Enter"{cm} =
+            @submit{}
+
+         Tab = "indentAuto"
+
+         "Ctrl-A" = "goLineStart"
+         "Ctrl-E" = "goLineEnd"
+         "Ctrl-K" = "killLine"
+
+      @cm.setOption{"mode", "earl-grey"}
+      @cm.setSize{.auto, .auto}
+
+      @cm.on{.changes} with {} ->
+         if [@live]:
+            @submit{}
+
+   submit{} =
+      text = @cm.getValue{}
+      match @evaluate{text}:
+         #success{v} -> @success{v}
+         #failure{e} -> @failure{e}
+         else ->
+            throw E.editor.bad_eval{"eval must return #success{value} or #failure{error}"}
