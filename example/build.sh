@@ -1,2 +1,2 @@
 
-earl tr example.eg example.js && browserify -r ./example.js:main > eg.js
+earl compile example.eg && browserify -r ./example.js:main > eg.js

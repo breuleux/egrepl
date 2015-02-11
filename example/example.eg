@@ -20,8 +20,16 @@ globals:
    Element
 
 
-macro acquire_cards{*, #data{*filenames}}:
-   require: [fs, quaint]
+macro acquire_cards{#data{*filenames}}:
+
+   print .hello
+   console.log{___node.require}
+
+   require:
+      fs, quaint
+
+   print .there
+
    globals: __dirname
 
    dirname = __dirname
@@ -116,15 +124,15 @@ setup{} =
          else ->
             "Invalid help topic: \"" + topic + "\""
 
-      macro next{_, _, form, _}:
-         '_next{}
+      macro next{_}:
+         `_next{}`
 
-      macro help{_, _, form, match}:
-         #void{} -> '_help{"help"}
-         topic -> '_help{^topic}
+      macro help{match}:
+         #void{} -> `_help{"help"}`
+         topic -> `_help{^topic}`
 
-      macro Q{_, _, _, arg}:
-         '__qengine.run{^arg}
+      macro Q{arg}:
+         `__qengine.run{^arg}`
 
       loader{url, fn} =
          script = DOM with script %
@@ -135,8 +143,8 @@ setup{} =
          document.head.appendChild{script}
          undefined
 
-      macro load{*, '[^url as ^v]}:
-         '[
+      macro load{`^url as ^v`}:
+         ```
             splice:
                globals: ^v
                [
@@ -160,7 +168,7 @@ setup{} =
                            __repl.unlock{}
                            clearTimeout{timer}
                ]
-         ]
+         ```
    ]
 
    repl.process{"help", false}
