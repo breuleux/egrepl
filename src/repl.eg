@@ -9,7 +9,7 @@ require:
    "codemirror/addon/runmode/runmode"
    "./earlmode"
    "./util" ->
-      DOM, dom_node_clear, mktable, repr
+      DOM, dom_node_clear, mktable, repr as _repr
    jquery as jQuery
 
 provide:
@@ -19,6 +19,7 @@ globals:
    document, window, alert, setTimeout
    Element
 
+let repr = _repr
 
 gensym = GenSym{"io_"}
 

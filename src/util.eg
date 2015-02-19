@@ -82,7 +82,7 @@ mktable{x, recur = repr} =
          .object.empty %
 
 
-repr{match x, Function? recur = repr} =
+let repr{match x, Function? recur = repr} =
    === true -> .special.true % "true"
    === false -> .special.false % "false"
    null? -> .special.nil % "null"

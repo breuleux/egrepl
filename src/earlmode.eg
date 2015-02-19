@@ -224,6 +224,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                state.nest[index] = {o, a, 0, false}
             else ->
                pass
+         null
 
       lineComment = ";;"
 

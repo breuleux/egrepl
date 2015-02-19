@@ -1,12 +1,12 @@
 
 require:
    "earlgrey" as eg
-   "earlgrey/lib/stdenv" ->
+   "earlgrey/lib/expand" ->
       topscope
    "./repl" ->
       Repl
    "./util" ->
-      DOM, repr
+      DOM, repr as _repr
    "./doc" ->
       Cards, Nav
    "./editor" ->
@@ -19,6 +19,7 @@ provide:
    Repl, DOM, repr
    Cards, Nav
 
+let repr = _repr
 
 
 egrepl{box, interactive, code} =
@@ -95,7 +96,7 @@ egrepl{box, interactive, code} =
       $current = -1
 
    repl.eval with S[
-      macro $out{*, match}:
+      macro $out{match}:
          do:
             globals: $current
          #void{} ->
