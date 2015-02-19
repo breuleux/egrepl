@@ -102,10 +102,16 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
             .code ->
                match stream.peek{}:
-                  "\"" ->
+                  d and in {"\"", "'", "`"} ->
                      stream.next{}
                      state.mode = .string
-                     "string"
+                     state.strtype =
+                        match d:
+                           "\"" -> "string"
+                           "'"  -> "interpolated"
+                           "`"  -> "quote"
+                     state.finisher = d
+                     state.strtype
                   ";" ->
                      stream.skipToEnd{}
                      state.previous = .comment
@@ -189,14 +195,16 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      null
 
             .string ->
-               stream.match{R"(\\\"|[^\"])+"}
-               match stream.eat{R"\""}:
+               stream.match{rx} where
+                  sf = state.finisher
+                  rx = new RegExp{"(\\\\" + sf + "|[^" + sf + "])+"}
+               match stream.eat{state.finisher}:
                   undefined? ->
-                     "string"
+                     state.strtype
                   else ->
                      state.mode = .code
                      state.previous = .id
-                     "string"
+                     state.strtype
 
          result
 
