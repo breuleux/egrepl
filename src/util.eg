@@ -1,7 +1,14 @@
 
+require:
+   opg ->
+      Location, Source
+   "opg/lib/highlight" ->
+      highlightLocations
+   fs
 
 provide:
    DOM, dom_node_clear, mktable, repr
+   GenSym, format_error
 
 globals:
    document, window, alert, setTimeout
@@ -28,10 +35,13 @@ DOM{match, default_tag = "div"} =
          node.appendChild{DOM{arg, default_tag}}
       node
 
-   Node? {=> tags, => props, => children} ->
+   ENode? {=> tags, => props, => children} ->
       var tag = default_tag
+      var id = null
       classes = {}
       tags each
+         R"^#(.*)"! {_, name} ->
+            id = name
          R"^\.(.*)"! {_, name} ->
             classes.push{name}
          other ->
@@ -42,7 +52,10 @@ DOM{match, default_tag = "div"} =
             document.createElement{tag}
          ns ->
             document.createElementNS{ns, tag}
-            
+
+      if id:
+         node.id = id
+
       if classes.length:
          node.className = classes.join{" "}
       items{props} each {match k, v} ->
@@ -93,12 +106,12 @@ let repr{match x, Function? recur = repr} =
    Array? {} -> .sequence.empty %
    Array? entries ->
       .sequence % [entries each x -> recur{x, repr}]
-   Node? n ->
+   ENode? n ->
       n
    Element? e ->
       e
-   when x["::repr"] ->
-      x["::repr"]{recur}
+   when x[":::repr"] ->
+      x[":::repr"]{recur}
    when Object.getPrototypeOf{x} === Object.prototype ->
       mktable{x}
    when x.constructor and x.constructor["::egclass"] ->
@@ -118,3 +131,80 @@ let repr{match x, Function? recur = repr} =
 dom_node_clear{x} =
    while x.children.length > 0:
       x.removeChild{x.children[0]}
+
+
+format_error{match e, context = 0} =
+
+   do:
+      fmt_args{e} =
+         if [e.args and e.args.length]:
+            then: .error_args % repr{e.args}
+            else: ""
+
+   E.syntax? {args => {args}} ->
+      hls = {.hl1, .hl2, .hl3, .hl4}
+      locs = enumerate{items{args}} each
+         {i, {key, arg}} when arg and arg.location ->
+            {arg.location, hls[i mod 4]}
+      div %
+         .error %
+            .error_type % e.name
+            .error_message % e.message
+         .error_args.syntax % repr{args}
+         highlightLocations{locs, context}
+
+   {location => loc and {=> source, => start, => end}} ->
+      div %
+         .error %
+            .error_type % e.name
+            .error_message % e.message
+         fmt_args{e}
+         highlightLocations{{{loc, .hl1}}, context}
+         .traceback % e.stack or ""
+
+   {location => #location{url, start, end}} ->
+      data = fs.readFileSync{url, .utf8} !! e -> null
+      if data:
+         then:
+            loc = Location{Source{data, url}, start, end}
+            div %
+               .error %
+                  .error_type % e.name
+                  .error_message % e.message
+               fmt_args{e}
+               ;; if{e.args, .error_args % repr{e.args}, ""}
+               highlightLocations{{{loc, .hl1}}, context}
+               .traceback %
+                  % e.stack or ""
+         else:
+            div %
+               .error %
+                  .error_type % e.name
+                  .error_message % e.message
+               fmt_args{e}
+               .traceback %
+                  % e.stack or e
+
+   other ->
+      div %
+         .error %
+            .error_type % e.name
+            .error_message % e.message
+         ;; if e.args:
+         ;;    then: .error_args % repr{e.args}
+         ;;    else: ""
+         fmt_args{e}
+         .traceback %
+            % e.stack
+
+
+GenSym{prefix} =
+   ;; Simple symbol generator.
+   ;; g = GenSym{"$"}
+   ;; g{} ==> "$0", "$1", "$2", ...
+   ;; g{"xyz"} ==> "xyz$0", "xyz$1", "xyz$2", ...
+   id = 0
+   {pfx = ""} ->
+      r = pfx + prefix + [String! id]
+      id++
+      r

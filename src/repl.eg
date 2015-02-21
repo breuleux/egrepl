@@ -1,15 +1,11 @@
 
 require:
-   "earlgrey" as eg
-   "earlgrey/lib/util" ->
-      GenSym
-   "earlgrey/lib/location" ->
-      format_error
    codemirror as CodeMirror
    "codemirror/addon/runmode/runmode"
    "./earlmode"
    "./util" ->
       DOM, dom_node_clear, mktable, repr as _repr
+      GenSym, format_error
    jquery as jQuery
 
 provide:
@@ -21,10 +17,11 @@ globals:
 
 let repr = _repr
 
+
 gensym = GenSym{"io_"}
 
 
-Error.prototype["::repr"] = {} ->
+Error.prototype[":::repr"] = {} ->
    format_error{this}
 
 
@@ -38,14 +35,14 @@ class Outputter:
       @elem.appendChild with
          DOM with div %
             data each match x ->
-               Element? or Node? -> x
+               Element? or ENode? -> x
                else -> .eg % repr{x}
       undefined
 
 
 class Repl:
 
-   constructor{@box, @target, @textarea, @eval, @keymap} =
+   constructor{@box, @target, @inputline, @textarea, @eval, @keymap} =
       @setup_cm{@textarea}
       @cursor = 0
       @history = {""}
@@ -138,10 +135,16 @@ class Repl:
          @history.push{""}
       @cursor = @history.length - 1
 
-   submit{} =
+   async! submit{} =
       text = @cm.getValue{}
+      jQuery{@inputline}.hide{}
+      try:
+         await @process_all{text, true, true}
+      catch e:
+         console.log with e.stack
+      jQuery{@inputline}.show{}
       @cm.setValue{""}
-      @process_all{text, true, true}
+      @cm.focus{}
 
    highlight{text} =
       hl = {}
@@ -153,16 +156,11 @@ class Repl:
       ".cm-s-repl" %
          hl
 
-   lock{} =
-      @__waiting = true
-   unlock{} =
-      @__waiting = false
-
-   process_all{text, display_in = true, sink = false} =
+   async! process_all{text, display_in = true, sink = false} =
       text.split{"\n===\n"} each part ->
-         @process{part, display_in, sink}
+         await @process{part, display_in, sink}
 
-   process{text, display_in = true, sink = false} =
+   async! process{text, display_in = true, sink = false} =
 
       obox = DOM with div %
       name = gensym{}
@@ -186,48 +184,45 @@ class Repl:
       @target.appendChild{node1}
       @target.appendChild{obox}
 
-      remainder{} where remainder{} =
-         if [@__waiting]:
-            setTimeout{remainder, 10}
-            return
+      result = await @eval{text}
 
-         node2 =
-            match @eval{text}:
-               when text.trim{} === "" ->
-                  ""
-               #success{undefined?} ->
-                  ""
-               #success{Node? n} ->
-                  n
-               #success{value} ->
-                  .out %
-                     .outbanner %
-                     .result % .eg % repr{value}
-               #failure{error} ->
-                  .err %
-                     .errbanner %
-                     .result % .eg % repr{error}
+      node2 =
+         match result:
+            when text.trim{} === "" ->
+               ""
+            #success{undefined?} ->
+               ""
+            #success{ENode? n} ->
+               n
+            #success{value} ->
+               .out %
+                  .outbanner %
+                  .result % .eg % repr{value}
+            #failure{error} ->
+               .err %
+                  .errbanner %
+                  .result % .eg % repr{error}
 
-         obox.appendChild with DOM{node2}
-         if sink:
-            @sink{}
+      obox.appendChild with DOM{node2}
+      if sink:
+         @sink{}
 
-         collapse{e} =
-            e.stopPropagation{}
-            at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
-            jQuery{this}.toggleClass{"collapsed"}
-            if at_top:
-               jQuery{@box}.scrollTop{@box.scrollHeight}
+      collapse{e} =
+         e.stopPropagation{}
+         at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
+         jQuery{this}.toggleClass{"collapsed"}
+         if at_top:
+            jQuery{@box}.scrollTop{@box.scrollHeight}
 
-         on{sel} =
-            jQuery{"#" + name + " " + sel}
+      on{sel} =
+         jQuery{"#" + name + " " + sel}
 
-         on{".sequence"}.addClass{"complex"}
-         on{".object"}.addClass{"complex"}
+      on{".sequence"}.addClass{"complex"}
+      on{".object"}.addClass{"complex"}
       
-         on{".complex"}.click{collapse}
-         on{".complex .complex .complex"}.addClass{.collapsed}
+      on{".complex"}.click{collapse}
+      on{".complex .complex .complex"}.addClass{.collapsed}
 
-         on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
-         on{".traceback"}.addClass{.collapsed}.click{collapse}
+      on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
+      on{".traceback"}.addClass{.collapsed}.click{collapse}
 

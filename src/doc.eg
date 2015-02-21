@@ -1,9 +1,11 @@
 
 require:
    fs
-   quaint
+   ;; quaint
    "./util" ->
       DOM, dom_node_clear
+
+quaint = null
 
 provide:
    Nav

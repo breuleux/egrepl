@@ -1,6 +1,6 @@
 
 require:
-   quaint
+   ;; quaint
    "../lib/repl" ->
       Repl
    "../lib/util" ->
@@ -95,6 +95,7 @@ setup{} =
    repl = egrepl with
       document.getElementById{"box"}
       document.getElementById{"interactive"}
+      document.getElementById{"inputline"}
       document.getElementById{"code"}
 
    ;; cards = Cards{repl} with Nav{document.getElementById{"help"}}

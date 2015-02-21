@@ -21,19 +21,27 @@ provide:
 
 let repr = _repr
 
+globals:
+   System
 
-egrepl{box, interactive, code} =
 
-   gene = eg.Generator{true}
+egrepl{box, interactive, inputline, code} =
+
+   gene = eg.Generator{true, "$eg$global"}
 
    repl = Repl with
 
-      box, interactive, code
+      box, interactive, inputline, code
 
-      {text} ->
+      async: {text} ->
          try:
-            #success{gene.evaluate{eg.Source{text, "<repl>"}}}
+            ;; print gene.generate{eg.Source{text, "<repl>"}}.code
+            #success{await gene.evaluateInteractive{eg.Source{text, "<repl>"}, opts}} where
+               opts = {to5 = true}
+            ;; #success{gene.evaluate{eg.Source{text, "<repl>"}}}
          catch e:
+            ;; print .FAILURE
+            ;; console.error{e}
             #failure{e}
 
       {...} with
@@ -42,12 +50,14 @@ egrepl{box, interactive, code} =
             cur = cm.getCursor{}
             tok = cm.getTokenAt{cur}
             situation =
+               predicate! stringtype{x} =
+                  x in {.string, .interpolated, .quote}
                match tok.type:
-                  .string when tok.end > cur.ch ->
+                  stringtype? when tok.end > cur.ch ->
                      .string
-                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
+                  stringtype? when R"\"$"? tok.string or R"^\."? tok.string ->
                      .id
-                  .string ->
+                  stringtype? ->
                      .string
                   .operator or .wordop or .open or .punctuation or === null ->
                      .op
@@ -94,8 +104,23 @@ egrepl{box, interactive, code} =
    repl.setenv{{...}} with
       $io = {}
       $current = -1
+      System = System
+      DOM = DOM
 
    repl.eval with S[
+      wait = promisify with {d, f} -> setTimeout.call{null, f, d}
+      macro print{expr}:
+         out = @mark{`$out`}
+         `t = ^expr, $out.log{t}, t`
+      macro __require{#data{expr}}:
+         ```
+         t = ^expr
+         name = match t:
+            RegExp{"^raw:"}? x -> x.slice{4}
+            RegExp{":"}? x -> x
+            x -> "npm:" + x
+         await System.import{name}
+         ```
       macro $out{match}:
          do:
             globals: $current

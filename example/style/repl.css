@@ -19,8 +19,8 @@ html {
     overflow-y: auto;
 }
 
-#box {width: 50%; float: right}
-#help {width: 50%; float: left}
+#box {width: 100%; float: right}
+#help {width: 0%; float: left}
 
 .result {
     /* outline: 0px; */
