@@ -166,7 +166,7 @@ class Repl:
       name = gensym{}
       obox.id = name
 
-      window.$current += 1
+      window.$currenti += 1
       window.$io.push with Outputter{obox}
 
       if display_in:

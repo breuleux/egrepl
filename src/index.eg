@@ -27,7 +27,23 @@ globals:
 
 egrepl{box, interactive, inputline, code} =
 
-   gene = eg.Generator{true, "$eg$global"}
+   globvar = "$eg$global"
+   gene = eg.Generator{true, globvar}
+   _ev = eg.evaluator with {
+      globvar = globvar
+      global = global
+      filename = "<repl>"
+      showname = "<repl>"
+      cwd = "<repl>"
+   }
+
+   evopts = {to5 = true, noboil = true}
+   ev{text} =
+      let code = gene.generate{eg.Source{text, "<repl>"}, evopts}
+      _ev{code}
+   evi{text} =
+      let code = gene.generateInteractive{eg.Source{text, "<repl>"}, evopts}
+      _ev{code}
 
    repl = Repl with
 
@@ -35,13 +51,13 @@ egrepl{box, interactive, inputline, code} =
 
       async: {text} ->
          try:
-            ;; print gene.generate{eg.Source{text, "<repl>"}}.code
-            #success{await gene.evaluateInteractive{eg.Source{text, "<repl>"}, opts}} where
-               opts = {to5 = true}
-            ;; #success{gene.evaluate{eg.Source{text, "<repl>"}}}
+            ;; code = gene.generateInteractive{eg.Source{text, "<repl>"}, opts}
+            ;; res = await ev{code}
+            #success{await evi{text}}
+
+            ;; #success{await gene.evaluateInteractive{eg.Source{text, "<repl>"}, opts}} where
+            ;;    opts = {to5 = true}
          catch e:
-            ;; print .FAILURE
-            ;; console.error{e}
             #failure{e}
 
       {...} with
@@ -92,8 +108,12 @@ egrepl{box, interactive, inputline, code} =
                      else ->
                         CodeMirror.Pass
 
-   glob = gene.evaluate{eg.Source{s, "<repl>"}} where
-      s = "globals: [global, window], if{typeof{global} === .undefined, window, global}"
+   ;; glob = gene.evaluate{eg.Source{s, "<repl>"}} where
+   ;;    s = "globals: [global, window], if{typeof{global} === .undefined, window, global}"
+   ;; ;; glob = ev with
+   ;; ;;    "globals: [global, window], if{typeof{global} === .undefined, window, global}"
+   ;; console.log{glob}
+   glob = global
 
    repl.setenv{values} =
       items{values} each {name, value} ->
@@ -103,15 +123,56 @@ egrepl{box, interactive, inputline, code} =
 
    repl.setenv{{...}} with
       $io = {}
-      $current = -1
+      $currenti = -1
       System = System
       DOM = DOM
 
    repl.eval with S[
+      globals:
+         window, document, JSON
+
+      ;; Annoyingly, this runs regardless of the value of global._egruntime_installed
+      ;; This will replace globals, so ENodes before the import will fail instance checks.
+      ;; So we just... preempt the damage.
+      chain System:
+         @import{"npm:earlgrey-runtime/6"}
+         @then with {_} -> pass
+         @catch with {e} -> pass
+
       wait = promisify with {d, f} -> setTimeout.call{null, f, d}
+
+      _load{match url} =
+         R".js$"? ->
+            new Promise with {resolve, reject} ->
+               document.getElementsByTagName{"head"}[0].appendChild with
+                  DOM with script %
+                     async = true
+                     type = "text/javascript"
+                     src = url
+                     onload{} = resolve{undefined}
+         R".css$"? ->
+            document.getElementsByTagName{"head"}[0].appendChild with
+               DOM with link %
+                  rel = "stylesheet"
+                  type = "text/css"
+                  href = url
+            undefined
+         else ->
+            throw E.unknown_resource_type{url}
+
+      macro $out{match}:
+         do:
+            globals: $currenti
+         #void{} ->
+            `$io[^=$currenti]`
+         expr ->
+            `$io[^=$currenti][^expr]`
+
       macro print{expr}:
-         out = @mark{`$out`}
-         `t = ^expr, $out.log{t}, t`
+         ;; out = @mark{`$out`}
+         ;; `t = ^expr, $out.log{t}, t`
+         `t = ^expr, $io[$currenti].log{t}, t`
+
       macro __require{#data{expr}}:
          ```
          t = ^expr
@@ -121,13 +182,10 @@ egrepl{box, interactive, inputline, code} =
             x -> "npm:" + x
          await System.import{name}
          ```
-      macro $out{match}:
-         do:
-            globals: $current
-         #void{} ->
-            `$io[^=$current]`
-         expr ->
-            `$io[^=$current][^expr]`
+
+      macro load{url}:
+         `await _load{^url}`
+
    ]
 
    repl
