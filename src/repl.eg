@@ -5,7 +5,7 @@ require:
    "./earlmode"
    "./util" ->
       DOM, dom_node_clear, mktable, repr as _repr
-      GenSym, format_error
+      GenSym, format_error, wait
    jquery as jQuery
 
 provide:
@@ -21,8 +21,11 @@ let repr = _repr
 gensym = GenSym{"io_"}
 
 
-Error.prototype[":::repr"] = {} ->
+Error.prototype["::repr"] = {} ->
    format_error{this}
+
+Element.prototype["::repr"] = {} ->
+   this
 
 
 
@@ -58,7 +61,7 @@ class Repl:
             ;; lineNumbers = true
          }
 
-      @cm.addKeyMap{{...} & @keymap} with
+      @cm.addKeyMap{km & @keymap} where km = {
 
          Enter{match cm} =
             do:
@@ -118,12 +121,13 @@ class Repl:
          "Ctrl-A" = "goLineStart"
          "Ctrl-E" = "goLineEnd"
          "Ctrl-K" = "killLine"
+      }
 
       @cm.setOption{"mode", "earl-grey"}
       @cm.setSize{.auto, .auto}
 
    sink{} =
-      setTimeout{..., 0} with {} ->
+      setTimeout{f, 0} where f{} =
          jQuery{@box}.scrollTop{@box.scrollHeight}
 
    add_to_history{text} =
@@ -138,10 +142,22 @@ class Repl:
    async! submit{} =
       text = @cm.getValue{}
       jQuery{@inputline}.hide{}
+      var done = false
       try:
-         await @process_all{text, true, true}
+         await any {
+            f{} where async! f{} =
+               res = await @process_all{text, true, true}
+               done = true
+               res
+            wait{10000}
+         }
+         ;; await @process_all{text, true, true}
       catch e:
+         done = true
          console.log with e.stack
+      if not done:
+         window.$io[window.$currenti].log with 
+            "Request is taking too much time... executing in the background..."
       jQuery{@inputline}.show{}
       @cm.setValue{""}
       @cm.focus{}
@@ -153,7 +169,7 @@ class Repl:
             if style:
                then: span ^[".cm-" + style] % text
                else: span % text
-      ".cm-s-repl" %
+      div".cm-s-repl" %
          hl
 
    async! process_all{text, display_in = true, sink = false} =
@@ -175,9 +191,9 @@ class Repl:
       node1 = DOM with
          if display_in:
             then:
-               .[in] %
-                  .inbanner %
-                  .entry % @highlight{text}
+               div.[in] %
+                  div.inbanner %
+                  div.entry % @highlight{text}
             else:
                ""
 
@@ -186,43 +202,52 @@ class Repl:
 
       result = await @eval{text}
 
-      node2 =
-         match result:
-            when text.trim{} === "" ->
-               ""
-            #success{undefined?} ->
-               ""
-            #success{ENode? n} ->
-               n
-            #success{value} ->
-               .out %
-                  .outbanner %
-                  .result % .eg % repr{value}
-            #failure{error} ->
-               .err %
-                  .errbanner %
-                  .result % .eg % repr{error}
+      node2 = f{result} where f{match} =
+         when text.trim{} === "" ->
+            ""
+         #success{undefined?} ->
+            ""
+         #success{ENode? n} ->
+            n
+         #success{value} ->
+            try:
+               div.out %
+                  div.outbanner %
+                  div.result % .eg % repr{value}
+            catch e:
+               f{#failure{e}}
+         #failure{error} ->
+            console.error{error}
+            div.err %
+               div.errbanner %
+               div.result % .eg % repr{error} !! e -> "Failed to print error."
 
       obox.appendChild with DOM{node2}
       if sink:
          @sink{}
 
-      collapse{e} =
-         e.stopPropagation{}
-         at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
-         jQuery{this}.toggleClass{"collapsed"}
-         if at_top:
-            jQuery{@box}.scrollTop{@box.scrollHeight}
+      ;; collapse{e} =
+      ;;    e.stopPropagation{}
+      ;;    at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
+      ;;    jQuery{this}.toggleClass{"collapsed"}
+      ;;    if at_top:
+      ;;       jQuery{@box}.scrollTop{@box.scrollHeight}
 
-      on{sel} =
-         jQuery{"#" + name + " " + sel}
+      ;; on{sel} =
+      ;;    jQuery{"#" + name + " " + sel}
 
-      on{".sequence"}.addClass{"complex"}
-      on{".object"}.addClass{"complex"}
+      ;; on{".array"}.addClass{"complex"}
+      ;; on{".object"}.addClass{"complex"}
       
-      on{".complex"}.click{collapse}
-      on{".complex .complex .complex"}.addClass{.collapsed}
+      ;; on{".complex"}.click{collapse}
+      ;; on{".complex .complex .complex"}.addClass{.collapsed}
 
-      on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
-      on{".traceback"}.addClass{.collapsed}.click{collapse}
+      ;; on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
+      ;; on{".traceback"}.addClass{.collapsed}.click{collapse}
+
+      ;; on{".ast.send"}.addClass{"complex2"}
+      ;; on{".ast.oper"}.addClass{"complex2"}
+      ;; on{".ast.data"}.addClass{"complex2"}
+      ;; on{".ast.multi"}.addClass{"complex2"}
+      ;; on{".complex2"}.click{collapse}
 

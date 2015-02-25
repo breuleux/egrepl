@@ -7,125 +7,255 @@ require:
    fs
 
 provide:
-   DOM, dom_node_clear, mktable, repr
-   GenSym, format_error
+   DOM, dom_node_clear, mktable, myrepr as repr
+   GenSym, format_error, wait
 
 globals:
    document, window, alert, setTimeout
    Element
 
 
+wait = promisify with {d, f} -> setTimeout.call{null, f, d}
+
+
 tag_namespaces = {=}
-[{...} each tag -> tag_namespaces[tag] = "http://www.w3.org/2000/svg"] with
-   .svg
-   .circle, .line, .path, .rect, .text
+[tags each tag -> tag_namespaces[tag] = "http://www.w3.org/2000/svg"] where
+   tags = {
+      .svg
+      .circle, .line, .path, .rect, .text, .g
+   }
 
+wrapChildren = {
+   assoc = true
+   ;; array = true
+}
 
-DOM{match, default_tag = "div"} =
+toDOM = ENode.getHTMLConverter{.dom}
 
-   String? s ->
-      document.createTextNode{s}
-
+DOM{match x} =
    Element? e ->
       e
-
    Array? args ->
-      node = document.createElement{"span"}
-      args each arg ->
-         node.appendChild{DOM{arg, default_tag}}
-      node
+      DOM{% args}
+   ENode? e ->
+      e.toHTML with {tag, attrs, children, orig} ->
+         result = match attrs:
+            {"class" => cls} when cls.split{" "}.some{x -> wrapChildren[x]} ->
+               toDOM{tag, attrs} with children each c ->
+                  wrapper = document.createElement{.span}
+                  wrapper.appendChild{c}
+                  wrapper
+            ns is tag_namespaces[String! tag] when ns ->
+               toDOM{tag, attrs & {namespace = ns}, children}
+            else ->
+               toDOM{tag, attrs, children}
+         if ENode? orig:
+            orig.__domnode = result
+         result
+   else ->
+      DOM{% x}
 
-   ENode? {=> tags, => props, => children} ->
-      var tag = default_tag
-      var id = null
-      classes = {}
-      tags each
-         R"^#(.*)"! {_, name} ->
-            id = name
-         R"^\.(.*)"! {_, name} ->
-            classes.push{name}
-         other ->
-            tag = other
 
-      node = match tag_namespaces[tag]:
-         undefined? ->
-            document.createElement{tag}
-         ns ->
-            document.createElementNS{ns, tag}
+   ;; DOM{match x, default_tag = "span"} =
 
-      if id:
-         node.id = id
+   ;; String? s or Number? s ->
+   ;;    document.createTextNode{String{s}}
 
-      if classes.length:
-         node.className = classes.join{" "}
-      items{props} each {match k, v} ->
-         R"^on"? ->
-            node[k] = v
+   ;; Element? e ->
+   ;;    e
+
+   ;; Array? args ->
+   ;;    node = document.createElement{"span"}
+   ;;    args each arg ->
+   ;;       node.appendChild{DOM{arg, default_tag}}
+   ;;    node
+
+   ;; ENode? {=> tags, => props, => children} ->
+   ;;    var tag = default_tag
+   ;;    var id = null
+   ;;    classes = {}
+   ;;    tags each
+   ;;       R"^#(.*)"! {_, name} ->
+   ;;          id = name
+   ;;       R"^\.(.*)"! {_, name} ->
+   ;;          classes.push{name}
+   ;;       other ->
+   ;;          tag = other
+
+   ;;    var node = match tag_namespaces[tag]:
+   ;;       undefined? ->
+   ;;          document.createElement{tag}
+   ;;       ns ->
+   ;;          document.createElementNS{ns, tag}
+
+   ;;    if id:
+   ;;       node.id = id
+
+   ;;    if classes.length:
+   ;;       node.className = classes.join{" "}
+   ;;    items{props} each {match k, v} ->
+   ;;       R"^on"? ->
+   ;;          node[k] = v
+   ;;       else ->
+   ;;          node.setAttribute{k, v}
+
+   ;;    match tag:
+   ;;       .raw ->
+   ;;          tag = .span
+   ;;          match children:
+   ;;             {String? s} ->
+   ;;                node.innerHTML = s
+   ;;       when classes.some{{c} -> wrapChildren[c]} ->
+   ;;          children each c ->
+   ;;             wrapper = document.createElement{.span}
+   ;;             wrapper.appendChild{DOM{c, default_tag}}
+   ;;             node.appendChild{wrapper}
+   ;;       other ->
+   ;;          children each c ->
+   ;;             node.appendChild{DOM{c, default_tag}}
+
+   ;;    node
+
+   ;; other ->
+   ;;    ;; print {other, Number? other, String? other, typeof{other}}
+   ;;    DOM{repr{other}}
+   ;;    ;; DOM{String{other}}
+
+
+wrapRepr{match x, process} =
+
+   ;; not [{"::lightweight" => lw} when lw{}] when process.repr.depth >= 2 ->
+   ;;    var expanded = false
+   ;;    var collapsed = true
+   ;;    r = repr with span.collapsed %
+   ;;       onclick{e} =
+   ;;          print "clicky"
+   ;;          n = r.__domnode
+   ;;          print n
+   ;;          if not expanded:
+   ;;             delete r.onclick
+   ;;             expanded = true
+   ;;             dom_node_clear{n}
+   ;;             n.appendChild{DOM{myrepr{x}}}
+   ;;    r
+
+   Array? and {ast => true?} ->
+      astrepr{x} where astrepr{match node} =
+         #void{} ->
+            .ast.void %
+         #symbol{x} ->
+            .ast.symbol % process.repr{x}
+         #value{x} ->
+            .ast.value % process.repr{x}
+         #send{f and #symbol{match}, arg and #data{x, y}} ->
+            "." when y[0] === .symbol ->
+               .ast.value % process.repr{y[1]}
+            when node.fromop ->
+               .ast.oper %
+                  .ast.buffer % astrepr{x}
+                  .ast.buffer % astrepr{f}
+                  .ast.buffer % astrepr{y}
+            else ->
+               .ast.send %
+                  .ast.buffer % astrepr{f}
+                  .ast.buffer % astrepr{arg}
+         {kind in {.send, .data, .multi}, *args} ->
+            .ast[^["." + kind]] % args each arg -> .ast.buffer % astrepr{arg}
          else ->
-            node.setAttribute{k, v}
+            process{node}
 
-      match tag:
-         .raw ->
-            tag = .span
-            match children:
-               {String? s} ->
-                  node.innerHTML = s
-         other ->
-            children each c ->
-               node.appendChild{DOM{c, default_tag}}
+   else ->
+      process{x}
 
-      node
+myrepr{x, wrap = null} =
+   r = repr.create{wrap or wrapRepr}
+   result = r{x}
+   r.seen
+   result
 
-   other ->
-      DOM{String! other}
+;; myrepr{x, state = {depth = 0, seen = new Map{}, preprocess = preproc, repr = repr}} =
+;;    repr{x, state}
+
+;; myrepr{match x, state = {depth = 0, seen = new Map{}, repr = repr}} =
+;;    Array? and {ast => true?} ->
+;;       astrepr{x} where astrepr{match node} =
+;;          #void{} ->
+;;             .ast.void %
+;;          #symbol{x} ->
+;;             .ast.symbol % x
+;;          #value{x} ->
+;;             .ast.value % state.repr{x, state & {repr = myrepr}}
+;;          #send{f and #symbol{match}, arg and #data{x, y}} ->
+;;             "." when y[0] === .symbol ->
+;;                .ast.value % state.repr{y[1], state & {repr = myrepr}}
+;;             when node.fromop ->
+;;                .ast.oper %
+;;                   .ast.buffer % astrepr{x}
+;;                   .ast.buffer % astrepr{f}
+;;                   .ast.buffer % astrepr{y}
+;;             else ->
+;;                .ast.send %
+;;                   .ast.buffer % astrepr{f}
+;;                   .ast.buffer % astrepr{arg}
+;;          {kind in {.send, .data, .multi}, *args} ->
+;;             .ast[^["." + kind]] % args each arg -> .ast.buffer % astrepr{arg}
+;;          else ->
+;;             state.repr{node, state & {repr = myrepr}}
+;;    else ->
+;;       state.repr{x, state & {repr = myrepr}}
+
+
+
 
 
 mktable{x, recur = repr} =
-   its = match x:
-      Array? -> x
-      other -> items{x}
-   if its.length:
-      then:
-         table.object %
-            its each {k, v} ->
-               tr %
-                  th % recur{k, repr}
-                  td % recur{v, repr}
-      else:
-         .object.empty %
+   null
+   ;; its = match x:
+   ;;    Array? -> x
+   ;;    other -> items{x}
+   ;; if its.length:
+   ;;    then:
+   ;;       table.object %
+   ;;          its each {k, v} ->
+   ;;             tr %
+   ;;                th % recur{k, repr}
+   ;;                td % recur{v, repr}
+   ;;    else:
+   ;;       div.object.empty %
 
 
-let repr{match x, Function? recur = repr} =
-   === true -> .special.true % "true"
-   === false -> .special.false % "false"
-   null? -> .special.nil % "null"
-   undefined? -> .special.nil % "undefined"
-   Number? -> .num % String{x}
-   "" -> .str.empty %
-   String? -> .str % x
-   Array? {} -> .sequence.empty %
-   Array? entries ->
-      .sequence % [entries each x -> recur{x, repr}]
-   ENode? n ->
-      n
-   Element? e ->
-      e
-   when x[":::repr"] ->
-      x[":::repr"]{recur}
-   when Object.getPrototypeOf{x} === Object.prototype ->
-      mktable{x}
-   when x.constructor and x.constructor["::egclass"] ->
-      .instance %
-         .classname % x.constructor["::name"]
-         mktable{x}
-   when x["::egclass"] ->
-      .class %
-         .classname % "Class " + x["::name"]
-         mktable{x.prototype}
-   Function? f ->
-      .function % if{f.name, f.name, "<anonymous>"}
-   other ->
-      .unknown % other.toString{}
+;; let repr{match x, Function? recur = repr} =
+;;    === true -> div.special.true % "true"
+;;    === false -> div.special.false % "false"
+;;    null? -> div.special.nil % "null"
+;;    undefined? -> div.special.nil % "undefined"
+;;    Number? -> div.num % String{x}
+;;    "" -> div.str.empty %
+;;    String? -> div.str % x
+;;    Array? {} -> div.sequence.empty %
+;;    Array? entries ->
+;;       div.sequence % [entries each x -> recur{x, repr}]
+;;    ENode? n ->
+;;       n
+;;    Element? e ->
+;;       e
+;;    when x[":::repr"] ->
+;;       x[":::repr"]{recur}
+;;    when Object.getPrototypeOf{x} === Object.prototype ->
+;;       mktable{x}
+;;    when x.constructor and x.constructor["::egclass"] ->
+;;       div.instance %
+;;          div.classname % x.constructor["::name"]
+;;          mktable{x}
+;;    when x["::egclass"] ->
+;;       div.class %
+;;          div.classname % "Class " + x["::name"]
+;;          mktable{x.prototype}
+;;    Function? f ->
+;;       .function % if{f.name, f.name, "<anonymous>"}
+;;    other ->
+;;       .unknown % other.toString{}
+
 
 
 dom_node_clear{x} =
@@ -147,20 +277,20 @@ format_error{match e, context = 0} =
          {i, {key, arg}} when arg and arg.location ->
             {arg.location, hls[i mod 4]}
       div %
-         .error %
-            .error_type % e.name
-            .error_message % e.message
-         .error_args.syntax % repr{args}
+         div.error %
+            div.error_type % e.name
+            div.error_message % e.message
+         div.error_args.syntax % repr{args}
          highlightLocations{locs, context}
 
    {location => loc and {=> source, => start, => end}} ->
       div %
-         .error %
-            .error_type % e.name
-            .error_message % e.message
+         div.error %
+            div.error_type % e.name
+            div.error_message % e.message
          fmt_args{e}
          highlightLocations{{{loc, .hl1}}, context}
-         .traceback % e.stack or ""
+         div.traceback % e.stack or ""
 
    {location => #location{url, start, end}} ->
       data = fs.readFileSync{url, .utf8} !! e -> null
@@ -168,34 +298,34 @@ format_error{match e, context = 0} =
          then:
             loc = Location{Source{data, url}, start, end}
             div %
-               .error %
-                  .error_type % e.name
-                  .error_message % e.message
+               div.error %
+                  div.error_type % e.name
+                  div.error_message % e.message
                fmt_args{e}
                ;; if{e.args, .error_args % repr{e.args}, ""}
                highlightLocations{{{loc, .hl1}}, context}
-               .traceback %
-                  % e.stack or ""
+               div.traceback %
+                  div % e.stack or ""
          else:
             div %
-               .error %
-                  .error_type % e.name
-                  .error_message % e.message
+               div.error %
+                  div.error_type % e.name
+                  div.error_message % e.message
                fmt_args{e}
-               .traceback %
+               div.traceback %
                   % e.stack or e
 
    other ->
       div %
-         .error %
-            .error_type % e.name
-            .error_message % e.message
+         div.error %
+            div.error_type % e.name
+            div.error_message % e.message
          ;; if e.args:
          ;;    then: .error_args % repr{e.args}
          ;;    else: ""
          fmt_args{e}
-         .traceback %
-            % e.stack
+         div.traceback %
+            div % e.stack
 
 
 GenSym{prefix} =

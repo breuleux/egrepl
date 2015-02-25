@@ -1,7 +1,7 @@
 
 require:
-   "earlgrey" as eg
-   "earlgrey/lib/expand" ->
+   "earlgrey/5" as eg
+   "earlgrey/lib5/expand" ->
       topscope
    "./repl" ->
       Repl
@@ -19,11 +19,10 @@ provide:
    Repl, DOM, repr
    Cards, Nav
 
-let repr = _repr
-
 globals:
    System
 
+let repr = _repr
 
 egrepl{box, interactive, inputline, code} =
 
@@ -51,62 +50,60 @@ egrepl{box, interactive, inputline, code} =
 
       async: {text} ->
          try:
-            ;; code = gene.generateInteractive{eg.Source{text, "<repl>"}, opts}
-            ;; res = await ev{code}
-            #success{await evi{text}}
-
-            ;; #success{await gene.evaluateInteractive{eg.Source{text, "<repl>"}, opts}} where
-            ;;    opts = {to5 = true}
+            res = await evi{text}
+            ;; print {res, typeof{res}, repr{res}}
+            #success{res}
          catch e:
             #failure{e}
 
-      {...} with
-         ;; smart parentheses
-         "'('"{cm} =
-            cur = cm.getCursor{}
-            tok = cm.getTokenAt{cur}
-            situation =
-               predicate! stringtype{x} =
-                  x in {.string, .interpolated, .quote}
-               match tok.type:
-                  stringtype? when tok.end > cur.ch ->
-                     .string
-                  stringtype? when R"\"$"? tok.string or R"^\."? tok.string ->
-                     .id
-                  stringtype? ->
-                     .string
-                  .operator or .wordop or .open or .punctuation or === null ->
-                     .op
-                  else ->
-                     .id
-            match situation:
-               .string -> CodeMirror.Pass
-               .op -> cm.replaceSelection{"["}
-               .id -> cm.replaceSelection{"{"}
+      {
+         ;; ;; smart parentheses
+         ;; "'('"{cm} =
+         ;;    cur = cm.getCursor{}
+         ;;    tok = cm.getTokenAt{cur}
+         ;;    situation =
+         ;;       predicate! stringtype{x} =
+         ;;          x in {.string, .interpolated, .quote}
+         ;;       match tok.type:
+         ;;          stringtype? when tok.end > cur.ch ->
+         ;;             .string
+         ;;          stringtype? when R"\"$"? tok.string or R"^\."? tok.string ->
+         ;;             .id
+         ;;          stringtype? ->
+         ;;             .string
+         ;;          .operator or .wordop or .open or .punctuation or === null ->
+         ;;             .op
+         ;;          else ->
+         ;;             .id
+         ;;    match situation:
+         ;;       .string -> CodeMirror.Pass
+         ;;       .op -> cm.replaceSelection{"["}
+         ;;       .id -> cm.replaceSelection{"{"}
 
-         "')'"{cm} =
-            cur = cm.getCursor{}
-            tok = cm.getTokenAt{cur}
-            situation =
-               match tok.type:
-                  .string when tok.end > cur.ch ->
-                     .string
-                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
-                     .other
-                  .string ->
-                     .string
-                  else ->
-                     .other
-            match situation:
-               .string -> CodeMirror.Pass
-               else ->
-                  match tok.state.nest:
-                     {*, {match, *}} ->
-                        "{" -> cm.replaceSelection{"}"}
-                        "[" -> cm.replaceSelection{"]"}
-                        else -> CodeMirror.Pass
-                     else ->
-                        CodeMirror.Pass
+         ;; "')'"{cm} =
+         ;;    cur = cm.getCursor{}
+         ;;    tok = cm.getTokenAt{cur}
+         ;;    situation =
+         ;;       match tok.type:
+         ;;          .string when tok.end > cur.ch ->
+         ;;             .string
+         ;;          .string when R"\"$"? tok.string or R"^\."? tok.string ->
+         ;;             .other
+         ;;          .string ->
+         ;;             .string
+         ;;          else ->
+         ;;             .other
+         ;;    match situation:
+         ;;       .string -> CodeMirror.Pass
+         ;;       else ->
+         ;;          match tok.state.nest:
+         ;;             {*, {match, *}} ->
+         ;;                "{" -> cm.replaceSelection{"}"}
+         ;;                "[" -> cm.replaceSelection{"]"}
+         ;;                else -> CodeMirror.Pass
+         ;;             else ->
+         ;;                CodeMirror.Pass
+      }
 
    ;; glob = gene.evaluate{eg.Source{s, "<repl>"}} where
    ;;    s = "globals: [global, window], if{typeof{global} === .undefined, window, global}"
@@ -121,23 +118,24 @@ egrepl{box, interactive, inputline, code} =
          glob[name] = value
       undefined
 
-   repl.setenv{{...}} with
+   repl.setenv with {
       $io = {}
       $currenti = -1
       System = System
       DOM = DOM
+   }
 
    repl.eval with S[
       globals:
          window, document, JSON
 
-      ;; Annoyingly, this runs regardless of the value of global._egruntime_installed
-      ;; This will replace globals, so ENodes before the import will fail instance checks.
-      ;; So we just... preempt the damage.
-      chain System:
-         @import{"npm:earlgrey-runtime/6"}
-         @then with {_} -> pass
-         @catch with {e} -> pass
+      ;; ;; Annoyingly, this runs regardless of the value of global._egruntime_installed
+      ;; ;; This will replace globals, so ENodes before the import will fail instance checks.
+      ;; ;; So we just... preempt the damage.
+      ;; chain System:
+      ;;    @import{"npm:earlgrey-runtime/6"}
+      ;;    @then with {_} -> pass
+      ;;    @catch with {e} -> pass
 
       wait = promisify with {d, f} -> setTimeout.call{null, f, d}
 
@@ -198,51 +196,52 @@ egeditor{target, success, failure, live = true} =
    ed = Editor with
       target
 
-      {...} with
-         ;; smart parentheses
-         "'('"{cm} =
-            cur = cm.getCursor{}
-            tok = cm.getTokenAt{cur}
-            situation =
-               match tok.type:
-                  .string when tok.end > cur.ch ->
-                     .string
-                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
-                     .id
-                  .string ->
-                     .string
-                  .operator or .wordop or .open or .punctuation or === null ->
-                     .op
-                  else ->
-                     .id
-            match situation:
-               .string -> CodeMirror.Pass
-               .op -> cm.replaceSelection{"["}
-               .id -> cm.replaceSelection{"{"}
+      {
+         ;; ;; smart parentheses
+         ;; "'('"{cm} =
+         ;;    cur = cm.getCursor{}
+         ;;    tok = cm.getTokenAt{cur}
+         ;;    situation =
+         ;;       match tok.type:
+         ;;          .string when tok.end > cur.ch ->
+         ;;             .string
+         ;;          .string when R"\"$"? tok.string or R"^\."? tok.string ->
+         ;;             .id
+         ;;          .string ->
+         ;;             .string
+         ;;          .operator or .wordop or .open or .punctuation or === null ->
+         ;;             .op
+         ;;          else ->
+         ;;             .id
+         ;;    match situation:
+         ;;       .string -> CodeMirror.Pass
+         ;;       .op -> cm.replaceSelection{"["}
+         ;;       .id -> cm.replaceSelection{"{"}
 
-         "')'"{cm} =
-            cur = cm.getCursor{}
-            tok = cm.getTokenAt{cur}
-            situation =
-               match tok.type:
-                  .string when tok.end > cur.ch ->
-                     .string
-                  .string when R"\"$"? tok.string or R"^\."? tok.string ->
-                     .other
-                  .string ->
-                     .string
-                  else ->
-                     .other
-            match situation:
-               .string -> CodeMirror.Pass
-               else ->
-                  match tok.state.nest:
-                     {*, {match, *}} ->
-                        "{" -> cm.replaceSelection{"}"}
-                        "[" -> cm.replaceSelection{"]"}
-                        else -> CodeMirror.Pass
-                     else ->
-                        CodeMirror.Pass
+         ;; "')'"{cm} =
+         ;;    cur = cm.getCursor{}
+         ;;    tok = cm.getTokenAt{cur}
+         ;;    situation =
+         ;;       match tok.type:
+         ;;          .string when tok.end > cur.ch ->
+         ;;             .string
+         ;;          .string when R"\"$"? tok.string or R"^\."? tok.string ->
+         ;;             .other
+         ;;          .string ->
+         ;;             .string
+         ;;          else ->
+         ;;             .other
+         ;;    match situation:
+         ;;       .string -> CodeMirror.Pass
+         ;;       else ->
+         ;;          match tok.state.nest:
+         ;;             {*, {match, *}} ->
+         ;;                "{" -> cm.replaceSelection{"}"}
+         ;;                "[" -> cm.replaceSelection{"]"}
+         ;;                else -> CodeMirror.Pass
+         ;;             else ->
+         ;;                CodeMirror.Pass
+      }
 
       {text} ->
          try:
