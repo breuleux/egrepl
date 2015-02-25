@@ -222,7 +222,14 @@ class Repl:
                div.errbanner %
                div.result % .eg % repr{error} !! e -> "Failed to print error."
 
-      obox.appendChild with DOM{node2}
+      obox.appendChild with DOM{node2} with {
+         async! wrapchange{f} =
+            at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
+            f{}
+            if at_top:
+               ;; await wait{0}
+               jQuery{@box}.scrollTop{@box.scrollHeight}
+      }
       if sink:
          @sink{}
 

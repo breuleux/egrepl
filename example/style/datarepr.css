@@ -41,7 +41,7 @@
 
 /* Arrays */
 
-.array, .array > .array, .array > .array:nth-child(even) {
+.array {
     display: inline-block;
     border: 2px solid #aaa;
     overflow: auto;
@@ -64,10 +64,27 @@
     background-color: #eef;
 }
 
+.container-array {
+    background-color: #fff !important;
+}
+.container-instance {
+    background-color: #fff !important;
+}
+.container-class {
+    background-color: #fff !important;
+}
+.container-object {
+    background-color: #fff !important;
+}
+.container-collapsed {
+    background-color: #fff !important;
+}
+
+
 
 /* Objects */
 
-.object, .array > .object, .array > .object:nth-child(even) {
+.object {
     display: inline-table;
     border: 2px solid #88f;
     padding: 0px;
@@ -138,6 +155,26 @@
     color: darkorange;
 }
 
+/* References */
+
+.reference {
+    display: inline-block;
+    font-weight: bold;
+    color: magenta;
+}
+.tagged-node {
+    display: inline-block;
+}
+.tagged-node > * {
+    vertical-align: middle;
+}
+.reference::before {
+    content: "#";
+}
+.tagged-node > .reference::after {
+    content: "=";
+    margin-right: 3px;
+}
 
 
 /* Fanciness */
@@ -220,9 +257,14 @@
     margin-right: 8px;
 }
 
-.location > * {
+.location, .source {
     display: block;
 }
+
+.location > .lineno, .location > .sourcecode {
+    display: inline;
+}
+
 
 
 

@@ -26,17 +26,53 @@ tag_namespaces = {=}
       .circle, .line, .path, .rect, .text, .g
    }
 
-wrapChildren = {
-   assoc = true
-   array = true
+
+wrapChildren{tag, attrs, var children} =
+   children = children each c ->
+      wrapper = document.createElement{.span}
+      wrapper.appendChild{c}
+      if c.className:
+         wrapper.className = [c.className.split{" "} each x -> S'container-{x}'].join{" "}
+      wrapper
+   {tag, attrs, children}
+
+preWrappers = {
+   assoc = wrapChildren
+   array = wrapChildren
 }
 
-collapsible = {
-   array = true
-   object = true
-   instance = true
-   class = true
+collapsible{collapsed}{result, opts} =
+   result.onclick{e} =
+      e.stopPropagation{}
+      [opts.wrapchange or [f -> f{}]] with
+         -> jquery{result}.toggleClass{"collapsed"}
+   if collapsed:
+      result.className += " collapsed"
+   result
+
+postWrappers = {
+   array = collapsible{false}
+   object = collapsible{false}
+   instance = collapsible{false}
+   class = collapsible{false}
+   traceback = collapsible{true}
+   error_args = collapsible{true}
 }
+
+
+;; wrapChildren = {
+;;    assoc = true
+;;    array = true
+;; }
+
+;; collapsible = {
+;;    array = true
+;;    object = true
+;;    instance = true
+;;    class = true
+;;    traceback = "collapsed"
+;;    error_args = "collapsed"
+;; }
 
 
 toDOM = ENode.getHTMLConverter{.dom}
@@ -44,19 +80,26 @@ toDOM = ENode.getHTMLConverter{.dom}
 wrapNode{c} =
    wrapper = document.createElement{.span}
    wrapper.appendChild{c}
+   if c.className:
+      wrapper.className = [c.className.split{" "} each x -> S'container-{x}'].join{" "}
    wrapper
 
-DOM{match x} =
+DOM{match x, opts = {=}} =
    Element? e ->
       e
    Array? args ->
-      DOM{% args}
+      DOM{% args, opts}
    ENode? e ->
-      e.toHTML with {match tag, attrs, children, orig} ->
+
+      e.toHTML with {match _tag, _attrs, _children, orig} ->
+
+         do:
+            var {tag, attrs, children} = {_tag, _attrs, _children}
+
          .delayed ->
             var expanded = false
             fn = attrs.compute
-            get node = DOM with
+            get node = DOM{elem, opts} where elem =
                span.collapsed %
                   onclick{e} =
                      e.stopPropagation{}
@@ -64,22 +107,67 @@ DOM{match x} =
                         delete node.onclick
                         expanded = true
                         node.className = ""
-                        node.appendChild{DOM{fn{}}}
+                        [opts.wrapchange or [f -> f{}]] with
+                           -> node.appendChild{DOM{fn{}, opts}}
+
          else ->
-            result = match attrs:
-               {"class" => cls} when cls.split{" "}.some{x -> wrapChildren[x]} ->
-                  toDOM{tag, attrs} with children each c -> wrapNode{c}
-               ns is tag_namespaces[String! tag] when ns ->
-                  toDOM{tag, attrs & {namespace = ns}, children}
-               else ->
-                  toDOM{tag, attrs, children}
-            if [attrs and attrs.class or ""].split{" "}.some{x -> collapsible[x]}:
-               result.onclick{e} =
-                  e.stopPropagation{}
-                  jquery{result}.toggleClass{"collapsed"}
-            result
+
+            [if{attrs, attrs.class or "", ""}].split{" "} each
+               c when preWrappers[c] ->
+                  {tag, attrs, children} =
+                     preWrappers[c]{tag, attrs, children, orig, opts}
+
+            ;; if attrs and [attrs.class or ""].split{" "}.some{x -> wrapChildren[x]}:
+            ;;    children = children each c -> wrapNode{c}
+
+            if [ns = tag_namespaces[String! tag]]:
+               attrs = attrs & {namespace = ns}
+
+            var result = toDOM{tag, attrs, children}
+
+            ;; [attrs and attrs.class or ""].split{" "} each
+            ;;    x when collapsible[x] ->
+            ;;       result.onclick{e} =
+            ;;          e.stopPropagation{}
+            ;;          [opts.wrapchange or [f -> f{}]] with
+            ;;             -> jquery{result}.toggleClass{"collapsed"}
+            ;;       if collapsible[x] === "collapsed":
+            ;;          result.className += " collapsed"
+
+            [if{attrs, attrs.class or "", ""}].split{" "} each
+               c when postWrappers[c] ->
+                  result = postWrappers[c]{result, opts}
+
+            if attrs and attrs._refid:
+               DOM with
+                  ".tagged-node" %
+                     .reference % attrs._refid
+                     result
+
+            elif attrs and ENode? orig:
+               ;; This is a dirty hack to display a reference number
+               ;; when it is added later by a delayed calculation.
+               ;; That number will be written in props._refid, so we
+               ;; watch for changes.
+               var _theid = undefined
+               Object.defineProperty{orig.props, "_refid"} with {
+                  configurable = true
+                  .get{} = _theid
+                  .set{v} =
+                     _theid = v
+                     wrapper = DOM with
+                        ".tagged-node" %
+                           .reference % _theid
+                     result.parentElement.replaceChild{wrapper, result}
+                     wrapper.appendChild{result}
+               }
+               result
+
+            else:
+               result
+
    else ->
-      DOM{% x}
+      DOM{% x, opts}
 
 
    ;; DOM{match x, default_tag = "span"} =
@@ -150,22 +238,9 @@ DOM{match x} =
 
 wrapRepr{match x, process} =
 
-   not [{"::lightweight" => lw} when lw{}] when process.repr.depth >= 2 ->
+   not [{"::lightweight" => lw} when lw{}] when process.repr.depth >= 3 ->
       delayed %
-         compute{} = myrepr{x}
-      ;; var expanded = false
-      ;; var collapsed = true
-      ;; r = repr with span.collapsed %
-      ;;    onclick{e} =
-      ;;       print "clicky"
-      ;;       n = r.__domnode
-      ;;       print n
-      ;;       if not expanded:
-      ;;          delete r.onclick
-      ;;          expanded = true
-      ;;          dom_node_clear{n}
-      ;;          n.appendChild{DOM{myrepr{x}}}
-      ;; r
+         compute{} = process.repr.withState{{depth = 0}}{x}
 
    Array? and {ast => true?} ->
       astrepr{x} where astrepr{match node} =
@@ -196,7 +271,7 @@ wrapRepr{match x, process} =
       process{x}
 
 myrepr{x, wrap = null} =
-   r = repr.create{wrap or wrapRepr}
+   r = repr.create{{wrap = wrap or wrapRepr}}
    result = r{x}
    r.seen
    result
