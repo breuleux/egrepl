@@ -5,6 +5,7 @@ require:
    "opg/lib/highlight" ->
       highlightLocations
    fs
+   jquery
 
 provide:
    DOM, dom_node_clear, mktable, myrepr as repr
@@ -27,10 +28,23 @@ tag_namespaces = {=}
 
 wrapChildren = {
    assoc = true
-   ;; array = true
+   array = true
 }
 
+collapsible = {
+   array = true
+   object = true
+   instance = true
+   class = true
+}
+
+
 toDOM = ENode.getHTMLConverter{.dom}
+
+wrapNode{c} =
+   wrapper = document.createElement{.span}
+   wrapper.appendChild{c}
+   wrapper
 
 DOM{match x} =
    Element? e ->
@@ -38,20 +52,32 @@ DOM{match x} =
    Array? args ->
       DOM{% args}
    ENode? e ->
-      e.toHTML with {tag, attrs, children, orig} ->
-         result = match attrs:
-            {"class" => cls} when cls.split{" "}.some{x -> wrapChildren[x]} ->
-               toDOM{tag, attrs} with children each c ->
-                  wrapper = document.createElement{.span}
-                  wrapper.appendChild{c}
-                  wrapper
-            ns is tag_namespaces[String! tag] when ns ->
-               toDOM{tag, attrs & {namespace = ns}, children}
-            else ->
-               toDOM{tag, attrs, children}
-         if ENode? orig:
-            orig.__domnode = result
-         result
+      e.toHTML with {match tag, attrs, children, orig} ->
+         .delayed ->
+            var expanded = false
+            fn = attrs.compute
+            get node = DOM with
+               span.collapsed %
+                  onclick{e} =
+                     e.stopPropagation{}
+                     if not expanded:
+                        delete node.onclick
+                        expanded = true
+                        node.className = ""
+                        node.appendChild{DOM{fn{}}}
+         else ->
+            result = match attrs:
+               {"class" => cls} when cls.split{" "}.some{x -> wrapChildren[x]} ->
+                  toDOM{tag, attrs} with children each c -> wrapNode{c}
+               ns is tag_namespaces[String! tag] when ns ->
+                  toDOM{tag, attrs & {namespace = ns}, children}
+               else ->
+                  toDOM{tag, attrs, children}
+            if [attrs and attrs.class or ""].split{" "}.some{x -> collapsible[x]}:
+               result.onclick{e} =
+                  e.stopPropagation{}
+                  jquery{result}.toggleClass{"collapsed"}
+            result
    else ->
       DOM{% x}
 
@@ -124,20 +150,22 @@ DOM{match x} =
 
 wrapRepr{match x, process} =
 
-   ;; not [{"::lightweight" => lw} when lw{}] when process.repr.depth >= 2 ->
-   ;;    var expanded = false
-   ;;    var collapsed = true
-   ;;    r = repr with span.collapsed %
-   ;;       onclick{e} =
-   ;;          print "clicky"
-   ;;          n = r.__domnode
-   ;;          print n
-   ;;          if not expanded:
-   ;;             delete r.onclick
-   ;;             expanded = true
-   ;;             dom_node_clear{n}
-   ;;             n.appendChild{DOM{myrepr{x}}}
-   ;;    r
+   not [{"::lightweight" => lw} when lw{}] when process.repr.depth >= 2 ->
+      delayed %
+         compute{} = myrepr{x}
+      ;; var expanded = false
+      ;; var collapsed = true
+      ;; r = repr with span.collapsed %
+      ;;    onclick{e} =
+      ;;       print "clicky"
+      ;;       n = r.__domnode
+      ;;       print n
+      ;;       if not expanded:
+      ;;          delete r.onclick
+      ;;          expanded = true
+      ;;          dom_node_clear{n}
+      ;;          n.appendChild{DOM{myrepr{x}}}
+      ;; r
 
    Array? and {ast => true?} ->
       astrepr{x} where astrepr{match node} =
