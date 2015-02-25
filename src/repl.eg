@@ -4,7 +4,7 @@ require:
    "codemirror/addon/runmode/runmode"
    "./earlmode"
    "./util" ->
-      DOM, dom_node_clear, mktable, repr as _repr
+      DOM, dom_node_clear, repr as _repr
       GenSym, format_error, wait
    jquery as jQuery
 
@@ -232,29 +232,4 @@ class Repl:
       }
       if sink:
          @sink{}
-
-      ;; collapse{e} =
-      ;;    e.stopPropagation{}
-      ;;    at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
-      ;;    jQuery{this}.toggleClass{"collapsed"}
-      ;;    if at_top:
-      ;;       jQuery{@box}.scrollTop{@box.scrollHeight}
-
-      ;; on{sel} =
-      ;;    jQuery{"#" + name + " " + sel}
-
-      ;; on{".array"}.addClass{"complex"}
-      ;; on{".object"}.addClass{"complex"}
-      
-      ;; on{".complex"}.click{collapse}
-      ;; on{".complex .complex .complex"}.addClass{.collapsed}
-
-      ;; on{".error_args.syntax"}.addClass{.collapsed}.click{collapse}
-      ;; on{".traceback"}.addClass{.collapsed}.click{collapse}
-
-      ;; on{".ast.send"}.addClass{"complex2"}
-      ;; on{".ast.oper"}.addClass{"complex2"}
-      ;; on{".ast.data"}.addClass{"complex2"}
-      ;; on{".ast.multi"}.addClass{"complex2"}
-      ;; on{".complex2"}.click{collapse}
 

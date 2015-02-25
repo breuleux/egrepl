@@ -8,7 +8,7 @@ require:
    jquery
 
 provide:
-   DOM, dom_node_clear, mktable, myrepr as repr
+   DOM, dom_node_clear, myrepr as repr
    GenSym, format_error, wait
 
 globals:
@@ -60,21 +60,6 @@ postWrappers = {
 }
 
 
-;; wrapChildren = {
-;;    assoc = true
-;;    array = true
-;; }
-
-;; collapsible = {
-;;    array = true
-;;    object = true
-;;    instance = true
-;;    class = true
-;;    traceback = "collapsed"
-;;    error_args = "collapsed"
-;; }
-
-
 toDOM = ENode.getHTMLConverter{.dom}
 
 wrapNode{c} =
@@ -117,22 +102,10 @@ DOM{match x, opts = {=}} =
                   {tag, attrs, children} =
                      preWrappers[c]{tag, attrs, children, orig, opts}
 
-            ;; if attrs and [attrs.class or ""].split{" "}.some{x -> wrapChildren[x]}:
-            ;;    children = children each c -> wrapNode{c}
-
             if [ns = tag_namespaces[String! tag]]:
                attrs = attrs & {namespace = ns}
 
             var result = toDOM{tag, attrs, children}
-
-            ;; [attrs and attrs.class or ""].split{" "} each
-            ;;    x when collapsible[x] ->
-            ;;       result.onclick{e} =
-            ;;          e.stopPropagation{}
-            ;;          [opts.wrapchange or [f -> f{}]] with
-            ;;             -> jquery{result}.toggleClass{"collapsed"}
-            ;;       if collapsible[x] === "collapsed":
-            ;;          result.className += " collapsed"
 
             [if{attrs, attrs.class or "", ""}].split{" "} each
                c when postWrappers[c] ->
@@ -169,71 +142,6 @@ DOM{match x, opts = {=}} =
    else ->
       DOM{% x, opts}
 
-
-   ;; DOM{match x, default_tag = "span"} =
-
-   ;; String? s or Number? s ->
-   ;;    document.createTextNode{String{s}}
-
-   ;; Element? e ->
-   ;;    e
-
-   ;; Array? args ->
-   ;;    node = document.createElement{"span"}
-   ;;    args each arg ->
-   ;;       node.appendChild{DOM{arg, default_tag}}
-   ;;    node
-
-   ;; ENode? {=> tags, => props, => children} ->
-   ;;    var tag = default_tag
-   ;;    var id = null
-   ;;    classes = {}
-   ;;    tags each
-   ;;       R"^#(.*)"! {_, name} ->
-   ;;          id = name
-   ;;       R"^\.(.*)"! {_, name} ->
-   ;;          classes.push{name}
-   ;;       other ->
-   ;;          tag = other
-
-   ;;    var node = match tag_namespaces[tag]:
-   ;;       undefined? ->
-   ;;          document.createElement{tag}
-   ;;       ns ->
-   ;;          document.createElementNS{ns, tag}
-
-   ;;    if id:
-   ;;       node.id = id
-
-   ;;    if classes.length:
-   ;;       node.className = classes.join{" "}
-   ;;    items{props} each {match k, v} ->
-   ;;       R"^on"? ->
-   ;;          node[k] = v
-   ;;       else ->
-   ;;          node.setAttribute{k, v}
-
-   ;;    match tag:
-   ;;       .raw ->
-   ;;          tag = .span
-   ;;          match children:
-   ;;             {String? s} ->
-   ;;                node.innerHTML = s
-   ;;       when classes.some{{c} -> wrapChildren[c]} ->
-   ;;          children each c ->
-   ;;             wrapper = document.createElement{.span}
-   ;;             wrapper.appendChild{DOM{c, default_tag}}
-   ;;             node.appendChild{wrapper}
-   ;;       other ->
-   ;;          children each c ->
-   ;;             node.appendChild{DOM{c, default_tag}}
-
-   ;;    node
-
-   ;; other ->
-   ;;    ;; print {other, Number? other, String? other, typeof{other}}
-   ;;    DOM{repr{other}}
-   ;;    ;; DOM{String{other}}
 
 
 wrapRepr{match x, process} =
@@ -275,90 +183,6 @@ myrepr{x, wrap = null} =
    result = r{x}
    r.seen
    result
-
-;; myrepr{x, state = {depth = 0, seen = new Map{}, preprocess = preproc, repr = repr}} =
-;;    repr{x, state}
-
-;; myrepr{match x, state = {depth = 0, seen = new Map{}, repr = repr}} =
-;;    Array? and {ast => true?} ->
-;;       astrepr{x} where astrepr{match node} =
-;;          #void{} ->
-;;             .ast.void %
-;;          #symbol{x} ->
-;;             .ast.symbol % x
-;;          #value{x} ->
-;;             .ast.value % state.repr{x, state & {repr = myrepr}}
-;;          #send{f and #symbol{match}, arg and #data{x, y}} ->
-;;             "." when y[0] === .symbol ->
-;;                .ast.value % state.repr{y[1], state & {repr = myrepr}}
-;;             when node.fromop ->
-;;                .ast.oper %
-;;                   .ast.buffer % astrepr{x}
-;;                   .ast.buffer % astrepr{f}
-;;                   .ast.buffer % astrepr{y}
-;;             else ->
-;;                .ast.send %
-;;                   .ast.buffer % astrepr{f}
-;;                   .ast.buffer % astrepr{arg}
-;;          {kind in {.send, .data, .multi}, *args} ->
-;;             .ast[^["." + kind]] % args each arg -> .ast.buffer % astrepr{arg}
-;;          else ->
-;;             state.repr{node, state & {repr = myrepr}}
-;;    else ->
-;;       state.repr{x, state & {repr = myrepr}}
-
-
-
-
-
-mktable{x, recur = repr} =
-   null
-   ;; its = match x:
-   ;;    Array? -> x
-   ;;    other -> items{x}
-   ;; if its.length:
-   ;;    then:
-   ;;       table.object %
-   ;;          its each {k, v} ->
-   ;;             tr %
-   ;;                th % recur{k, repr}
-   ;;                td % recur{v, repr}
-   ;;    else:
-   ;;       div.object.empty %
-
-
-;; let repr{match x, Function? recur = repr} =
-;;    === true -> div.special.true % "true"
-;;    === false -> div.special.false % "false"
-;;    null? -> div.special.nil % "null"
-;;    undefined? -> div.special.nil % "undefined"
-;;    Number? -> div.num % String{x}
-;;    "" -> div.str.empty %
-;;    String? -> div.str % x
-;;    Array? {} -> div.sequence.empty %
-;;    Array? entries ->
-;;       div.sequence % [entries each x -> recur{x, repr}]
-;;    ENode? n ->
-;;       n
-;;    Element? e ->
-;;       e
-;;    when x[":::repr"] ->
-;;       x[":::repr"]{recur}
-;;    when Object.getPrototypeOf{x} === Object.prototype ->
-;;       mktable{x}
-;;    when x.constructor and x.constructor["::egclass"] ->
-;;       div.instance %
-;;          div.classname % x.constructor["::name"]
-;;          mktable{x}
-;;    when x["::egclass"] ->
-;;       div.class %
-;;          div.classname % "Class " + x["::name"]
-;;          mktable{x.prototype}
-;;    Function? f ->
-;;       .function % if{f.name, f.name, "<anonymous>"}
-;;    other ->
-;;       .unknown % other.toString{}
-
 
 
 dom_node_clear{x} =
