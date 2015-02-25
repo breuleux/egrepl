@@ -1,7 +1,7 @@
 
 
 /* Set fonts */
-.true, .false, .null, .undefined, .num, .str, .name {
+.true, .false, .null, .undefined, .num, .str, .name, .regexp {
     font-family: 'Cousine', monospace;
     white-space: pre-wrap;
 }
@@ -123,6 +123,21 @@
 .str:empty::before { content: "\"\""; color: #888; }
 .array:empty::before { content: "\2205"; color: #888; }
 .object:empty::before { content: "\2205"; color: #888; }
+
+
+/* Miscellaneous */
+
+.regexp {
+    color: darkblue;
+}
+.regexp::before { content: "R\""; color: blue; }
+.regexp::after { content: "\""; color: blue; }
+
+.unknown {
+    font-weight: bold;
+    color: darkorange;
+}
+
 
 
 /* Fanciness */
