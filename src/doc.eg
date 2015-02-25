@@ -86,7 +86,7 @@ class Nav:
          if i < pages.length - 1:
             ltarget.appendChild with DOM with span.history_separator %
       {_, page} = pages[pos]
-      ptarget.replaceChild{..., ptarget.children[0]} with DOM with page
+      ptarget.replaceChild{DOM{page}, ptarget.children[0]}
 
    focus_tab{tab} =
       @pane.children[tab].scrollIntoView{true}
@@ -100,7 +100,7 @@ acquire_cards{*, #data{*filenames}} =
 
    results = #data{}
    dispatch = quaint.dispatch.clone{}
-   components = {...} with
+   components = {
 
       "topic --> contents"{engine, node, {=> topic, => contents}} =
          results.push with #data with
@@ -113,6 +113,8 @@ acquire_cards{*, #data{*filenames}} =
             #value{topic.location.text{}}
             #value{desc.location.text{}}
             #value{contents.location.text{}}
+
+   }
 
    items{components} each {spec, fn} ->
       dispatch.register with quaint.Spec{spec, fn}
@@ -156,7 +158,7 @@ class Cards:
             data = @cards[topic]
             match e.which:
                when not data ->
-                  @card_displayer{"error", "Error", ...}{tab} with
+                  @card_displayer{"error", "Error", msg}{tab} where msg =
                      "__ERROR: There is no documentation for `\"" + topic + "\""
                1 ->
                   data[1]{tab}
@@ -214,7 +216,7 @@ class Cards:
 
       dispatch = quaint.dispatch.clone{}
 
-      components = {...} with
+      components = {
 
          "maybe label / code"{engine, node, {label => match, => code}} =
             #text{""} ->
@@ -237,6 +239,8 @@ class Cards:
                insert_doc with
                   shed{topic}.location.text{}
                   shed{label}.location.text{}
+
+      }
 
       items{components} each {spec, fn} ->
          dispatch.register with quaint.Spec{spec, fn}

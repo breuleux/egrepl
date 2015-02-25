@@ -19,7 +19,7 @@ class Editor:
             lineNumbers = true
          }
 
-      @cm.addKeyMap{{...} & @keymap} with
+      @cm.addKeyMap{km & @keymap} where km = {
 
          "Ctrl-Enter"{cm} =
             @submit{}
@@ -29,6 +29,7 @@ class Editor:
          "Ctrl-A" = "goLineStart"
          "Ctrl-E" = "goLineEnd"
          "Ctrl-K" = "killLine"
+      }
 
       @cm.setOption{"mode", "earl-grey"}
       @cm.setSize{.auto, .auto}
