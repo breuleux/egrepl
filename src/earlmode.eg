@@ -62,6 +62,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
            \ or "and" or "not" or "or"
            \ or "in" or "mod"
            \ or "each" or "as"
+           \ or "of" or "is"
          [+ in "+\\-*/~^<>=%&|?!@#.:'"] or boundary
       ```
       op4 = R```
@@ -146,7 +147,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      "wordop"
                   match when stream.match{re.id} ->
                      match when R"lowprio|comma"? state.previous or state.sol ->
-                        when stream.match{R" +(with|where|when|and|not|or|in|mod|each|as)( |$)", false} ->
+                        when stream.match{R" +(with|where|when|and|not|or|in|mod|each|as|of|is)( |$)", false} ->
                            state.previous = .id
                            "variable"
                         when stream.match{R" *:| +[A-Za-z0-9$\[\{\"]", false} ->
