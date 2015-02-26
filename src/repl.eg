@@ -24,8 +24,9 @@ gensym = GenSym{"io_"}
 Error.prototype["::repr"] = {} ->
    format_error{this}
 
-Element.prototype["::repr"] = {} ->
-   this
+;; Element.prototype["::repr"] = {} ->
+;;    % String{this}
+;;    ;; this
 
 
 
@@ -45,7 +46,17 @@ class Outputter:
 
 class Repl:
 
-   constructor{@box, @target, @inputline, @textarea, @eval, @keymap} =
+   constructor{opts} =
+      ;; Required fields
+      {elements => {box => @box, target => @target
+                    textarea => @textarea}
+       eval => @eval} = opts
+
+      ;; Optional fields
+      @inputline = opts.elements.inputline
+      @keymap = opts.elements.keymap or {=}
+
+      @keymap or= {=}
       @setup_cm{@textarea}
       @cursor = 0
       @history = {""}
@@ -141,7 +152,8 @@ class Repl:
 
    async! submit{} =
       text = @cm.getValue{}
-      jQuery{@inputline}.hide{}
+      if @inputline:
+         jQuery{@inputline}.hide{}
       var done = false
       try:
          await any {
@@ -158,7 +170,8 @@ class Repl:
       if not done:
          window.$io[window.$currenti].log with 
             "Request is taking too much time... executing in the background..."
-      jQuery{@inputline}.show{}
+      if @inputline:
+         jQuery{@inputline}.show{}
       @cm.setValue{""}
       @cm.focus{}
 

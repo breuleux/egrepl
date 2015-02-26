@@ -44,19 +44,21 @@ egrepl{box, interactive, inputline, code} =
       let code = gene.generateInteractive{eg.Source{text, "<repl>"}, evopts}
       _ev{code}
 
-   repl = Repl with
-
-      box, interactive, inputline, code
-
-      async: {text} ->
+   repl = Repl with {
+      elements = {
+         box = box
+         target = interactive
+         inputline = inputline
+         textarea = code
+      }
+      async! eval{text} =
          try:
             res = await evi{text}
             ;; print {res, typeof{res}, repr{res}}
             #success{res}
          catch e:
             #failure{e}
-
-      {=}
+   }
 
    glob = global
 
