@@ -5,7 +5,7 @@ require:
    "./earlmode"
    "./util" ->
       DOM, dom_node_clear, repr as _repr
-      GenSym, format_error, wait
+      GenSym, wait
    jquery as jQuery
 
 provide:
@@ -19,14 +19,6 @@ let repr = _repr
 
 
 gensym = GenSym{"io_"}
-
-
-Error.prototype["::repr"] = {} ->
-   format_error{this}
-
-;; Element.prototype["::repr"] = {} ->
-;;    % String{this}
-;;    ;; this
 
 
 
@@ -191,58 +183,56 @@ class Repl:
 
    async! process{text, display_in = true, sink = false} =
 
-      obox = DOM with div %
-      name = gensym{}
-      obox.id = name
-
-      window.$currenti += 1
-      window.$io.push with Outputter{obox}
-
+      ;; Show the input
       if display_in:
          @add_to_history{text}
+         @target.appendChild with DOM with
+            div.[in] %
+               div.inbanner %
+               div.entry % @highlight{text}
 
-      node1 = DOM with
-         if display_in:
-            then:
-               div.[in] %
-                  div.inbanner %
-                  div.entry % @highlight{text}
-            else:
-               ""
-
-      @target.appendChild{node1}
+      ;; Set up the output box
+      obox = DOM with
+         div % id = gensym{}
+      window.$currenti += 1
+      window.$io.push with Outputter{obox}
       @target.appendChild{obox}
 
+      ;; Compute the result
       result = await @eval{text}
 
-      node2 = f{result} where f{match} =
-         when text.trim{} === "" ->
-            ""
-         #success{undefined?} ->
-            ""
-         #success{ENode? n} ->
-            n
-         #success{value} ->
-            try:
-               div.out %
-                  div.outbanner %
-                  div.result % .eg % repr{value}
-            catch e:
-               f{#failure{e}}
-         #failure{error} ->
-            console.error{error}
-            div.err %
-               div.errbanner %
-               div.result % .eg % repr{error} !! e -> "Failed to print error."
+      ;; Display the result
+      obox.appendChild with DOM{node, opts} where
 
-      obox.appendChild with DOM{node2} with {
-         async! wrapchange{f} =
-            at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
-            f{}
-            if at_top:
-               ;; await wait{0}
-               jQuery{@box}.scrollTop{@box.scrollHeight}
-      }
+         node = f{result} where f{match} =
+            when text.trim{} === "" ->
+               ""
+            #success{undefined?} ->
+               ""
+            #success{ENode? n} ->
+               n
+            #success{value} ->
+               try:
+                  div.out %
+                     div.outbanner %
+                     div.result % .eg % repr{value}
+               catch e:
+                  f{#failure{e}}
+            #failure{error} ->
+               console.error{error}
+               div.err %
+                  div.errbanner %
+                  div.result % .eg % repr{error} !! e -> "Failed to print error."
+
+         opts = {
+            async! wrapchange{f} =
+               at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
+               f{}
+               if at_top:
+                  jQuery{@box}.scrollTop{@box.scrollHeight}
+         }
+
+      ;; Optionally pull the focus to the bottom where the result is
       if sink:
          @sink{}
 

@@ -255,6 +255,10 @@ format_error{match e, context = 0} =
             div % e.stack
 
 
+Error.prototype["::repr"] = {} ->
+   format_error{this}
+
+
 GenSym{prefix} =
    ;; Simple symbol generator.
    ;; g = GenSym{"$"}
