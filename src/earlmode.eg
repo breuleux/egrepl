@@ -117,9 +117,9 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                      stream.skipToEnd{}
                      state.previous = .comment
                      "comment"
-                  when stream.match{"___"} ->
-                     state.previous = .id
-                     "ellipsis"
+                  ;; when stream.match{"___"} ->
+                  ;;    state.previous = .id
+                  ;;    "ellipsis"
                   when stream.match{R"\.[A-Za-z0-9_$]+"} ->
                      state.previous = .id
                      "string"

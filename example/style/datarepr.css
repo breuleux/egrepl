@@ -229,7 +229,7 @@
 
 
 .traceback {
-    display: inline;
+    display: block;
     white-space: pre;
 }
 

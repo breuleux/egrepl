@@ -22,6 +22,20 @@ provide:
 globals:
    System
 
+
+;; Hack to avoid reloading these modules...
+toNeuter = {
+   "npm:earlgrey-runtime/5"
+   "npm:earlgrey-runtime/6"
+   "npm:earlgrey-runtime/lib"
+   "npm:earlgrey-runtime@0.0.4/5"
+   "npm:earlgrey-runtime@0.0.4/6"
+   "npm:earlgrey-runtime@0.0.4/lib"
+}
+System._loader.modules &: object with toNeuter each x ->
+   {x, {name = x, module = {=}}}
+
+
 let repr = _repr
 
 egrepl{box, interactive, inputline, code} =
@@ -78,14 +92,6 @@ egrepl{box, interactive, inputline, code} =
    repl.eval with S[
       globals:
          window, document, JSON
-
-      ;; ;; Annoyingly, this runs regardless of the value of global._egruntime_installed
-      ;; ;; This will replace globals, so ENodes before the import will fail instance checks.
-      ;; ;; So we just... preempt the damage.
-      ;; chain System:
-      ;;    @import{"npm:earlgrey-runtime/6"}
-      ;;    @then with {_} -> pass
-      ;;    @catch with {e} -> pass
 
       wait = promisify with {d, f} -> setTimeout.call{null, f, d}
 
