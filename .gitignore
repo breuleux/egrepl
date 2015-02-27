@@ -1,1 +1,8 @@
 *~
+*.map
+egcache
+node_modules
+lib
+lib5
+lib6
+junk
