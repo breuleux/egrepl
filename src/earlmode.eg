@@ -211,7 +211,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
       indent{state, line} =
 
-         {_, outer, inner, first} = state.nest[index] where
+         {_, outr, inner, first} = state.nest[index] where
             index = state.nest.length - 1
 
          add =
@@ -221,7 +221,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
          match line:
             R`start, in "]}"`? ->
-               outer + add
+               outr + add
             else ->
                inner + add
 

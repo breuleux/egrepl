@@ -142,14 +142,14 @@ class Repl:
          @history.push{""}
       @cursor = @history.length - 1
 
-   async! submit{} =
+   async submit{} =
       text = @cm.getValue{}
       if @inputline:
          jQuery{@inputline}.hide{}
       var done = false
       try:
          await any {
-            f{} where async! f{} =
+            f{} where async f{} =
                res = await @process_all{text, true, true}
                done = true
                res
@@ -177,11 +177,11 @@ class Repl:
       div".cm-s-repl" %
          hl
 
-   async! process_all{text, display_in = true, sink = false} =
+   async process_all{text, display_in = true, sink = false} =
       text.split{"\n===\n"} each part ->
          await @process{part, display_in, sink}
 
-   async! process{text, display_in = true, sink = false} =
+   async process{text, display_in = true, sink = false} =
 
       ;; Show the input
       if display_in:
@@ -225,7 +225,7 @@ class Repl:
                   div.result % .eg % repr{error} !! e -> "Failed to print error."
 
          opts = {
-            async! wrapchange{f} =
+            async wrapchange{f} =
                at_top = @box.scrollTop + jQuery{@box}.height{} == @box.scrollHeight
                f{}
                if at_top:
