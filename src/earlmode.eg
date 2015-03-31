@@ -9,7 +9,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
       id = R```
          start
          in "a-zA-Z$_"
-         * in "a-zA-Z$_0-9"
+         * [in "a-zA-Z$_0-9" or ["-", in "a-zA-Z$_0-9"]]
       ```
 
       numr = R```
@@ -82,20 +82,18 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
       token{stream, state} =
 
          if stream.sol{}:
-            then:
-               if stream.match{R"===$"}:
-                  then:
-                     return "sep"
-                  else:
-                     state.sol = true
-                     index = state.nest.length - 1
-                     match state.nest[index]:
-                        {o, a, _, _} ->
-                           state.nest[index] = {o, a, stream.indentation{}, false}
-                        else ->
-                           pass
+            if stream.match{R"===$"}:
+               return "sep"
             else:
-               state.sol = false
+               state.sol = true
+               index = state.nest.length - 1
+               match state.nest[index]:
+                  {o, a, _, _} ->
+                     state.nest[index] = {o, a, stream.indentation{}, false}
+                  else ->
+                     pass
+         else:
+            state.sol = false
 
          spaces = stream.eatSpace{}
 
@@ -120,18 +118,21 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                   ;; when stream.match{"___"} ->
                   ;;    state.previous = .id
                   ;;    "ellipsis"
-                  when stream.match{R"\.[A-Za-z0-9_$]+"} ->
+                  when stream.match{R"\.[A-Za-z0-9_$\\-]+"} ->
                      state.previous = .id
                      "string"
-                  when stream.match{R"@[A-Za-z0-9$]+"} ->
+                  when stream.match{R"@[A-Za-z0-9$\\-]+"} ->
                      state.previous = .id
                      "attribute"
-                  when stream.match{R"#[A-Za-z0-9$]+"} ->
+                  when stream.match{R"#[A-Za-z0-9$\\-]+"} ->
                      state.previous = .id
                      "tag"
                   when stream.match{R"pass|else|return|break|continue|match"} ->
                      state.previous = .id
                      "keyword"
+                  when stream.match{R"true|false|null|undefined|this"} ->
+                     state.previous = .id
+                     "special"
                   when stream.match{re.lowprio1} ->
                      state.previous = .lowprio
                      "operator"
