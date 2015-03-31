@@ -167,15 +167,19 @@ class Repl:
       @cm.setValue{""}
       @cm.focus{}
 
-   highlight{text} =
+   highlight{text, inline = false} =
       hl = {}
       CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
          hl.push with
             if style:
                then: span ^[".cm-" + style] % text
                else: span % text
-      div".cm-s-repl" %
-         hl
+      if inline:
+         span".cm-s-repl" %
+            hl
+      else:
+         div".cm-s-repl" %
+            hl
 
    async process_all{text, display_in = true, sink = false} =
       text.split{"\n===\n"} each part ->
@@ -190,6 +194,8 @@ class Repl:
             div.[in] %
                div.inbanner %
                div.entry % @highlight{text}
+         if sink:
+            @sink{}
 
       ;; Set up the output box
       obox = DOM with
