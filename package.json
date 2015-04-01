@@ -1,8 +1,16 @@
 {
   "name": "repple",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "REPL",
   "main": "./lib/index.js",
+  "dependencies": {
+    "codemirror": "^5.1.0",
+    "earlgrey-runtime": ">=0.0.6",
+    "jquery": "^2.1.3"
+  },
+  "devDependencies": {
+    "earlgrey": ">=0.0.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
