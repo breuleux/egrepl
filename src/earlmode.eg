@@ -63,8 +63,9 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
            \ or "in" or "mod"
            \ or "each" or "as"
            \ or "of" or "is"
-         [+ in "+\\-*/~^<>=%&|?!@#.:'"] or boundary
+         [+ in "+\\-*/~^<>=%&|?!@#.:"] or boundary
       ```
+
       op4 = R```
          start
          "`", {+ in "A-Za-z0-9_$"}, "`"
@@ -111,7 +112,7 @@ CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
                            "`"  -> "quote"
                      state.finisher = d
                      state.strtype
-                  ";" ->
+                  when stream.match{R";;"} ->
                      stream.skipToEnd{}
                      state.previous = .comment
                      "comment"
