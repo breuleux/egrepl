@@ -172,7 +172,7 @@ class Repl:
       CodeMirror.runMode{text or " ", "earl-grey"} with {text, style} ->
          hl.push with
             if style:
-               then: span ^[".cm-" + style] % text
+               then: span[^[".cm-" + style]] % text
                else: span % text
       if inline:
          span".cm-s-repl" %
