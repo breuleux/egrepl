@@ -44,13 +44,15 @@ class Repl:
           box => @box
           target => @target
           textarea => @textarea
-          sink-anchor => @sink-anchor = @box
        }
        eval => @eval} = opts
 
       ;; Optional fields
       @inputline = opts.elements.inputline
       @keymap = opts.elements.keymap or {=}
+
+      if opts.sink:
+         @sink = opts.sink
 
       @keymap or= {=}
       @setup_cm{@textarea}
@@ -135,7 +137,7 @@ class Repl:
 
    sink{} =
       setTimeout{f, 0} where f{} =
-         jQuery{@sink-anchor}.scrollTop{@sink-anchor.scrollHeight}
+         jQuery{@box}.scrollTop{@box.scrollHeight}
 
    add_to_history{text} =
       hl = @history.length
