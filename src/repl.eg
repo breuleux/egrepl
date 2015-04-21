@@ -40,8 +40,12 @@ class Repl:
 
    constructor{opts} =
       ;; Required fields
-      {elements => {box => @box, target => @target
-                    textarea => @textarea}
+      {elements => {
+          box => @box
+          target => @target
+          textarea => @textarea
+          sink-anchor => @sink-anchor = @box
+       }
        eval => @eval} = opts
 
       ;; Optional fields
@@ -131,7 +135,7 @@ class Repl:
 
    sink{} =
       setTimeout{f, 0} where f{} =
-         jQuery{@box}.scrollTop{@box.scrollHeight}
+         jQuery{@sink-anchor}.scrollTop{@sink-anchor.scrollHeight}
 
    add_to_history{text} =
       hl = @history.length
