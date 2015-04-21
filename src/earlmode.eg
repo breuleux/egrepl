@@ -2,6 +2,9 @@
 require:
    codemirror as CodeMirror
 
+provide:
+   CodeMirror
+
 
 CodeMirror.defineMode{"earl-grey"} with {config, parserConfig} ->
 
