@@ -6,23 +6,27 @@ require:
       Editor
    "./util" ->
       DOM, repr as _repr
+   /dir, /dom, /html
 
 provide:
    Repl, Editor, DOM, _repr as repr
 
 
 ;; Hack to avoid reloading these modules...
-toNeuter = {
-   "npm:earlgrey-runtime/5"
-   "npm:earlgrey-runtime/6"
-   "npm:earlgrey-runtime/lib"
-   "npm:earlgrey-runtime@0.0.5/5"
-   "npm:earlgrey-runtime@0.0.5/6"
-   "npm:earlgrey-runtime@0.0.5/lib"
+to-cache = {
+   {"npm:earlgrey-runtime/5", {=}}
+   {"npm:earlgrey-runtime/6", {=}}
+   {"npm:earlgrey-runtime/lib", {=}}
+   {"npm:earlgrey-runtime@0.0.5/5", {=}}
+   {"npm:earlgrey-runtime@0.0.5/6", {=}}
+   {"npm:earlgrey-runtime@0.0.5/lib", {=}}
+   {"npm:earlgrey-runtime/std/dir", dir}
+   {"npm:earlgrey-runtime/std/dom", dom}
+   {"npm:earlgrey-runtime/std/html", html}
 }
 if global.System:
-   global.System._loader.modules &: object with toNeuter each x ->
-      {x, {name = x, module = {=}}}
+   global.System._loader.modules &: object with to-cache each {x, v} ->
+      {x, {name = x, module = v}}
 else:
    global.System = {=}
 
