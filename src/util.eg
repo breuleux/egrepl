@@ -6,6 +6,8 @@ require:
       highlightLocations
    fs
    jquery
+   /html
+   /dom -> toDOM
 
 provide:
    DOM, dom_node_clear, myrepr as repr
@@ -60,8 +62,6 @@ postWrappers = {
 }
 
 
-toDOM = ENode.getHTMLConverter{.dom}
-
 wrapNode{c} =
    wrapper = document.createElement{.span}
    wrapper.appendChild{c}
@@ -76,7 +76,7 @@ DOM{match x, opts = {=}} =
       DOM{% args, opts}
    ENode? e ->
 
-      e.toHTML with {match _tag, _attrs, _children, orig} ->
+      html{e} with {match _tag, _attrs, _children, orig} ->
 
          do:
             var {tag, attrs, children} = {_tag, _attrs, _children}

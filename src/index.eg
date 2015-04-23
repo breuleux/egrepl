@@ -23,5 +23,6 @@ toNeuter = {
 if global.System:
    global.System._loader.modules &: object with toNeuter each x ->
       {x, {name = x, module = {=}}}
-
+else:
+   global.System = {=}
 
