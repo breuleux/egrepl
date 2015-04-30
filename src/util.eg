@@ -84,7 +84,7 @@ DOM{match x, opts = {=}} =
          .delayed ->
             var expanded = false
             fn = attrs.compute
-            get node = DOM{elem, opts} where elem =
+            expr-value node = DOM{elem, opts} where elem =
                span.collapsed %
                   onclick{e} =
                      e.stopPropagation{}

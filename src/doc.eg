@@ -127,7 +127,7 @@ acquire_cards{*, #data{*filenames}} =
       Q.run{contents}
 
    ;; quaint mucks this up for some reason
-   set __dirname = dirname
+   set-var __dirname = dirname
 
    results
 
