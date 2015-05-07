@@ -24,16 +24,20 @@ gensym = GenSym{"io_"}
 
 class Outputter:
 
-   constructor{@elem} =
+   constructor{@elem, @sink = false} =
       pass
 
    log{*data} =
-      @elem.appendChild with
+      result = 
          DOM with div %
             data each match x ->
                Element? or ENode? -> x
                else -> .eg % repr{x}
-      undefined
+      @elem.appendChild{result}
+      if @sink:
+         set-timeout{f, 0} where f{} =
+            jQuery{@elem}.scroll-top{@elem.scroll-height}
+      result
 
 
 class Repl:

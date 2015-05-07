@@ -1,7 +1,7 @@
 
 require:
    "./repl" ->
-      Repl
+      Repl, Outputter
    "./editor" ->
       Editor
    "./util" ->
@@ -9,7 +9,7 @@ require:
    /dir, /dom, /html
 
 provide:
-   Repl, Editor, DOM, _repr as repr
+   Repl, Editor, DOM, _repr as repr, Outputter
 
 
 ;; Hack to avoid reloading these modules...
