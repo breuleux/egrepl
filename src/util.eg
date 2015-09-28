@@ -48,6 +48,19 @@ collapsible{collapsed}{result, opts} =
       e.stopPropagation{}
       [opts.wrapchange or [f -> f{}]] with
          -> jquery{result}.toggleClass{"collapsed"}
+
+   ;; r = jquery{result}
+   ;; result.onclick{e} =
+   ;;    if r.has-class{.collapsed}:
+   ;;       e.stop-propagation{}
+   ;;       [opts.wrapchange or [f -> f{}]] with
+   ;;          -> r.remove-class{.collapsed}
+   ;; result.ondblclick{e} =
+   ;;    if not r.has-class{.collapsed}:
+   ;;       e.stop-propagation{}
+   ;;       [opts.wrapchange or [f -> f{}]] with
+   ;;          -> r.add-class{.collapsed}
+
    if collapsed:
       result.className += " collapsed"
    result

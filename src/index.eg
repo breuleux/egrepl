@@ -1,10 +1,10 @@
 
 require:
-   "./repl" ->
+   .repl ->
       Repl, Outputter
-   "./editor" ->
+   .editor ->
       Editor
-   "./util" ->
+   .util ->
       DOM, repr as _repr
    /dir, /dom, /html
 

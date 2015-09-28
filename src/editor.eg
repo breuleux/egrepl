@@ -1,6 +1,9 @@
 
 require:
    codemirror as CodeMirror
+   "codemirror/addon/runmode/runmode"
+   .earlmode
+
 
 provide:
    Editor
@@ -8,15 +11,26 @@ provide:
 
 class Editor:
 
-   constructor{@target, @keymap, @evaluate, @success, @failure, @live = true} =
+   constructor{opts} =
+      {
+         elements => {
+            textarea => @textarea
+         }
+         eval => @eval
+         prepare => @prepare = [-> pass]
+         success => @success
+         failure => @failure
+         live => @live = false
+         keymap => @keymap = {=}
+      } = opts
 
-      @cm = CodeMirror with
-         @target
+      @cm = CodeMirror.from-text-area with
+         @textarea
          {
             indentUnit = 3
             viewportMargin = 1/0
             theme = .repl
-            lineNumbers = true
+            lineNumbers = opts.line-numbers
          }
 
       @cm.addKeyMap{km & @keymap} where km = {
@@ -38,9 +52,10 @@ class Editor:
          if [@live]:
             @submit{}
 
-   submit{} =
+   async submit{} =
       text = @cm.getValue{}
-      match @evaluate{text}:
+      await @prepare{}
+      match [await @eval{text}]:
          #success{v} -> @success{v}
          #failure{e} -> @failure{e}
          else ->
