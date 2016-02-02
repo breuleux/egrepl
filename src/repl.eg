@@ -34,7 +34,7 @@ class Outputter:
          DOM with div %
             data each match x ->
                Element? or ENode? -> x
-               else -> .eg % repr{x}
+               else -> .repple-data % repr{x}
       @elem.appendChild{result}
       if @sink:
          set-timeout{f, 0} where f{} =
@@ -202,10 +202,12 @@ class Repl:
                then: span[^[".cm-" + style]] % text
                else: span % text
       if inline:
-         span".cm-s-repl" %
+         span %
+            class = 'cm-s-{@theme}'
             hl
       else:
-         div".cm-s-repl" %
+         div %
+            class = 'cm-s-{@theme}'
             hl
 
    async process_all{text, display_in = true, sink = false} =
@@ -218,9 +220,9 @@ class Repl:
       if display_in:
          @add_to_history{text}
          @target.appendChild with DOM with
-            div.[in] %
-               div.inbanner %
-               div.entry % @highlight{text}
+            div.repple-in %
+               div.repple-inbanner %
+               div.repple-entry % @highlight{text}
          if sink:
             @sink{}
 
@@ -246,16 +248,18 @@ class Repl:
                n
             #success{value} ->
                try:
-                  div.out %
-                     div.outbanner %
-                     div.result % .eg % repr{value}
+                  div.repple-out %
+                     div.repple-outbanner %
+                     div.repple-result % .repple-data % repr{value}
                catch e:
                   f{#failure{e}}
             #failure{error} ->
                console.error{error}
-               div.err %
-                  div.errbanner %
-                  div.result % .eg % repr{error} !! e -> "Failed to print error."
+               div.repple-err %
+                  div.repple-errbanner %
+                  div.repple-result %
+                     .repple-data %
+                        repr{error} !! e -> "Failed to print error."
 
          opts = {
             async wrapchange{f} =
