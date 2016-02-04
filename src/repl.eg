@@ -1,10 +1,7 @@
 
 require:
-   codemirror as CodeMirror
-   "codemirror/addon/runmode/runmode"
-   "./earlmode"
-   "./util" ->
-      DOM, dom_node_clear, repr as _repr
+   .util ->
+      DOM, repr as _repr
       GenSym, wait
    jquery as jQuery
 
@@ -57,7 +54,14 @@ class Repl:
          setenv => @setenv
          lang => @lang = "javascript"
          theme => @theme = "default"
+         continuate => @continuate = null
+         codemirror => @CodeMirror
       }
+
+      @pass = @CodeMirror.Pass
+
+      if not @CodeMirror.run-mode:
+         throw E.repple.run-mode{"Missing run mode for CodeMirror. Try to require('codemirror/addon/runmode/runmode')"}
 
       @repple = {
          io = {}
@@ -82,7 +86,7 @@ class Repl:
 
    setup_cm{textarea} =
 
-      @cm = CodeMirror.fromTextArea with
+      @cm = @CodeMirror.fromTextArea with
          textarea
          {
             indentUnit = 3
@@ -93,21 +97,27 @@ class Repl:
 
       @cm.addKeyMap{km & @keymap} where km = {
 
-         Enter{match cm} =
-            do:
-               e = cm.lineCount{} - 1
-            when cm.getCursor{}.line < e ->
-               CodeMirror.Pass
-            else ->
-               state = cm.getStateAfter{e}
-               match:
-                  when state.mode !== .code
-                       \ or state.nest.length > 1
-                       \ or R"lowprio|op"? state.previous
-                       \ or [state.nest[0][2] > 0 and not R"^\s*$"? cm.getLine{e}] ->
-                     CodeMirror.Pass
-                  else ->
+         Enter{cm} =
+            match @continuate:
+               Function? ->
+                  if @continuate{cm}:
+                     @pass
+                  else:
                      @submit{}
+               === false ->
+                  @pass
+               match when cm.line-count{} === 1 ->
+                  null? or undefined? ->
+                     @submit{}
+                  String? s or RegExp? s ->
+                     if cm.get-line{0}.match{s}:
+                        @pass
+                     else:
+                        @submit{}
+                  else ->
+                     @pass
+               else ->
+                  @pass
 
          "Shift-Enter" = "newlineAndIndent"
 
@@ -132,7 +142,7 @@ class Repl:
                @cm.setCursor{@cm.lineCount{}, 0}
                @sink{}
             else ->
-               CodeMirror.Pass
+               @pass
 
          Down{match cm} =
             when [@cursor < @history.length - 1 and
@@ -141,7 +151,7 @@ class Repl:
                @cm.setCursor{0, @cm.getLine{0}.length}
                @sink{}
             else ->
-               CodeMirror.Pass
+               @pass
 
          Tab = "indentAuto"
 
@@ -196,7 +206,7 @@ class Repl:
 
    highlight{text, inline = false} =
       hl = {}
-      CodeMirror.runMode{text or " ", @lang} with {text, style} ->
+      @CodeMirror.runMode{text or " ", @lang} with {text, style} ->
          hl.push with
             if style:
                then: span[^[".cm-" + style]] % text

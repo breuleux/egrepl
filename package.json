@@ -4,8 +4,7 @@
   "description": "REPL",
   "main": "./lib/index.js",
   "dependencies": {
-    "codemirror": "^5.1.0",
-    "earlgrey-runtime": ">=0.0.11",
+    "earlgrey-runtime": ">=0.0.12",
     "jquery": "^2.1.3",
     "opg": ">= 0.0.4"
   },
