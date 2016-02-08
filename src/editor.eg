@@ -1,7 +1,7 @@
 
 require:
-   codemirror as CodeMirror
-   "codemirror/addon/runmode/runmode"
+   ;; codemirror as CodeMirror
+   ;; "codemirror/addon/runmode/runmode"
    .earlmode
 
 
@@ -14,22 +14,26 @@ class Editor:
    constructor{opts} =
       {
          elements => {
-            textarea => @textarea
+            editorarea => @textarea
          }
          eval => @eval
+         setenv => @setenv
          prepare => @prepare = [-> pass]
          success => @success
          failure => @failure
+         lang => @lang
+         theme => @theme = .default
          live => @live = false
          keymap => @keymap = {=}
+         codemirror => @CodeMirror
       } = opts
 
-      @cm = CodeMirror.from-text-area with
+      @cm = @CodeMirror.from-text-area with
          @textarea
          {
             indentUnit = 3
             viewportMargin = 1/0
-            theme = .repl
+            theme = @theme
             lineNumbers = opts.line-numbers
          }
 
@@ -45,8 +49,8 @@ class Editor:
          "Ctrl-K" = "killLine"
       }
 
-      @cm.setOption{"mode", "earl-grey"}
-      @cm.setSize{.auto, .auto}
+      @cm.setOption{"mode", @lang}
+      @cm.setSize{.auto, "100%"}
 
       @cm.on{.changes} with {} ->
          if [@live]:
@@ -55,6 +59,7 @@ class Editor:
    async submit{} =
       text = @cm.getValue{}
       await @prepare{}
+      ;; await @eval{text}
       match [await @eval{text}]:
          #success{v} -> @success{v}
          #failure{e} -> @failure{e}

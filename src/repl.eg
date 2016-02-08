@@ -46,9 +46,9 @@ class Repl:
       @opts = opts
       opts as {
          elements => {
-            box => @box
-            target => @target
-            textarea => @textarea
+            repl => @box
+            scrollback => @target
+            replarea => @textarea
          }
          eval => @eval
          setenv => @setenv
