@@ -197,7 +197,7 @@ class Repl:
          done = true
          console.log with e.stack
       if not done:
-         @repple.io[@repple.currenti].log with 
+         @repple.io[@repple.current].log with 
             "Request is taking too much time... executing in the background..."
       if @inputline:
          jQuery{@inputline}.show{}
@@ -239,7 +239,7 @@ class Repl:
       ;; Set up the output box
       obox = DOM with
          div % id = gensym{}
-      @repple.currenti += 1
+      @repple.current += 1
       @repple.io.push with Outputter{obox}
       @target.appendChild{obox}
 
@@ -269,7 +269,9 @@ class Repl:
                   div.repple-errbanner %
                   div.repple-result %
                      .repple-data %
-                        repr{error} !! e -> "Failed to print error."
+                        repr{error} !! e ->
+                           console.error{e}
+                           "Failed to print error."
 
          opts = {
             async wrapchange{f} =
