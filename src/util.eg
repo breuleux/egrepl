@@ -212,6 +212,8 @@ format_error{match e, context = 0} =
          if [e.args and e.args.length]:
             then: .error_args % repr{e.args}
             else: ""
+      stack =
+         div % [e.stack !! _ -> "Error getting traceback."] or ""
 
    E.syntax? {args => {args}} ->
       hls = {.hl1, .hl2, .hl3, .hl4}
@@ -232,7 +234,7 @@ format_error{match e, context = 0} =
             div.error_message % e.message
          fmt_args{e}
          highlightLocations{{{loc, .hl1}}, context}
-         div.traceback % e.stack or ""
+         div.traceback % stack
 
    {location => #location{url, start, end}} ->
       data = fs.readFileSync{url, .utf8} !! e -> null
@@ -246,16 +248,14 @@ format_error{match e, context = 0} =
                fmt_args{e}
                ;; if{e.args, .error_args % repr{e.args}, ""}
                highlightLocations{{{loc, .hl1}}, context}
-               div.traceback %
-                  div % e.stack or ""
+               div.traceback % stack
          else:
             div %
                div.error %
                   div.error_type % e.name
                   div.error_message % e.message
                fmt_args{e}
-               div.traceback %
-                  % e.stack or e
+               div.traceback % stack
 
    other ->
       div %
@@ -266,8 +266,7 @@ format_error{match e, context = 0} =
          ;;    then: .error_args % repr{e.args}
          ;;    else: ""
          fmt_args{e}
-         div.traceback %
-            div % e.stack
+         div.traceback % stack
 
 
 Error.prototype["::repr"] = {} ->
