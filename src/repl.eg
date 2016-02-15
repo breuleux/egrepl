@@ -284,4 +284,5 @@ class Repl:
       ;; Optionally pull the focus to the bottom where the result is
       if sink:
          @sink{}
+         @cm.focus{}
 
