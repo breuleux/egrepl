@@ -101,22 +101,27 @@ class Repl:
             match @continuate:
                Function? ->
                   if @continuate{cm}:
+                     @sink{}
                      @pass
                   else:
                      @submit{}
                === false ->
+                  @sink{}
                   @pass
                match when cm.line-count{} === 1 ->
                   null? or undefined? ->
                      @submit{}
                   String? s or RegExp? s ->
                      if cm.get-line{0}.match{s}:
+                        @sink{}
                         @pass
                      else:
                         @submit{}
                   else ->
+                     @sink{}
                      @pass
                else ->
+                  @sink{}
                   @pass
 
          "Shift-Enter" = "newlineAndIndent"
@@ -167,8 +172,9 @@ class Repl:
       @cm.setSize{.auto, .auto}
 
    sink{} =
-      setTimeout{f, 0} where f{} =
-         jQuery{@box}.scrollTop{@box.scrollHeight}
+      f{} = jQuery{@box}.scrollTop{@box.scrollHeight}
+      setTimeout{f, 0}
+      setTimeout{f, 10}
 
    add_to_history{text} =
       hl = @history.length
