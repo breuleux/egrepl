@@ -219,11 +219,11 @@ class Repl:
                else: span % text
       if inline:
          span %
-            class = 'cm-s-{@theme}'
+            class = 'CodeMirror cm-s-{@theme}'
             hl
       else:
          div %
-            class = 'cm-s-{@theme}'
+            class = 'CodeMirror cm-s-{@theme}'
             hl
 
    async process_all{text, display_in = true, sink = false} =
