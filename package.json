@@ -1,6 +1,6 @@
 {
   "name": "repple",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "REPL",
   "main": "./lib/index.js",
   "dependencies": {
@@ -22,7 +22,8 @@
     "url": "https://github.com/breuleux/repple"
   },
   "keywords": [
-    "repl", "earlgrey"
+    "repl",
+    "earlgrey"
   ],
   "author": "Olivier Breuleux",
   "license": "MIT"
