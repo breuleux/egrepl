@@ -89,7 +89,7 @@ class Repl:
       @cm = @CodeMirror.fromTextArea with
          textarea
          {
-            indentUnit = 3
+            indentUnit = @opts.indent or 3
             viewportMargin = 1/0
             theme = @theme
             ;; lineNumbers = true
