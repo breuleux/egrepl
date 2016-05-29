@@ -1,9 +1,7 @@
 
 require:
-   ;; codemirror as CodeMirror
-   ;; "codemirror/addon/runmode/runmode"
    .earlmode
-
+   events -> EventEmitter
 
 provide:
    Editor
@@ -12,7 +10,7 @@ provide:
 class Editor:
 
    constructor{opts} =
-      {
+      opts as {
          elements => {
             editorarea => @textarea
          }
@@ -26,7 +24,7 @@ class Editor:
          live => @live = false
          keymap => @keymap = {=}
          codemirror => @CodeMirror
-      } = opts
+      }
 
       @cm = @CodeMirror.from-text-area with
          @textarea
@@ -52,16 +50,26 @@ class Editor:
       @cm.setOption{"mode", @lang}
       @cm.setSize{.auto, "100%"}
 
+      @ee = new EventEmitter{}
+
       @cm.on{.changes} with {} ->
          if [@live]:
             @submit{}
 
+   on{event, fn} =
+      @ee.on{event, fn}
+
+   emit{event, *args} =
+      @ee.emit{event, *args}
+
    async submit{} =
       text = @cm.getValue{}
       await @prepare{}
-      ;; await @eval{text}
-      match [await @eval{text}]:
+      result = match [await @eval{text}]:
          #success{v} -> @success{v}
          #failure{e} -> @failure{e}
          else ->
             throw E.editor.bad_eval{"eval must return #success{value} or #failure{error}"}
+      @emit{.submit, result}
+      result
+
