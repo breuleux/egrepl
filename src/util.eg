@@ -160,7 +160,7 @@ DOM{match x, opts = {=}} =
 
 wrapRepr{match x, process} =
 
-   when not[x and x["::lightweight"] and x["::lightweight"]{}]
+   when not[not x or x["::lightweight"] and x["::lightweight"]{}]
       \ and process.repr.depth >= 3 ->
       delayed %
          compute{} = process.repr.withState{{depth = 0}}{x}
