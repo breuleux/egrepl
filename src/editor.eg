@@ -1,6 +1,5 @@
 
 require:
-   .earlmode
    events -> EventEmitter
 
 provide:
