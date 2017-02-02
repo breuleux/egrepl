@@ -24,7 +24,7 @@ to-cache = {
    {"npm:earlgrey-runtime/std/dom", dom}
    {"npm:earlgrey-runtime/std/html", html}
 }
-if global.System:
+if global.System??._loader??.modules:
    global.System._loader.modules &: object with to-cache each {x, v} ->
       {x, {name = x, module = v}}
 else:
