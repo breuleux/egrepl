@@ -1,6 +1,6 @@
 {
   "name": "repple",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "REPL",
   "main": "./lib/index.js",
   "dependencies": {
