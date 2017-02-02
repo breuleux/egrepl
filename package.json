@@ -4,12 +4,12 @@
   "description": "REPL",
   "main": "./lib/index.js",
   "dependencies": {
-    "earlgrey-runtime": ">=0.0.12",
+    "earlgrey-runtime": "^0.1.0",
     "jquery": "^2.1.3",
     "opg": ">= 0.0.4"
   },
   "devDependencies": {
-    "earlgrey": ">=0.0.12"
+    "earlgrey": "^0.1.0"
   },
   "scripts": {
     "refresh": "earl compile -5vso lib/ src/",
